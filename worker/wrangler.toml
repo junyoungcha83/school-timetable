@@ -6,7 +6,7 @@ compatibility_date = "2025-05-01"
 #   npx wrangler kv:namespace create TIMETABLE
 [[kv_namespaces]]
 binding = "TIMETABLE"
-id = "REPLACE_ME"
+id = "25816f25ef1f476d8ce184e1b9a0570e"
 
 # 편집 비밀번호는 secret 으로:
 #   npx wrangler secret put EDIT_TOKEN
