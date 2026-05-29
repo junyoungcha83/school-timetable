@@ -1,0 +1,319 @@
+:root {
+  --primary: #ec4899;
+  --primary-dark: #db2777;
+  --bg: #fdf2f8;
+  --card: #fff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --danger: #dc2626;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", "Noto Sans KR", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+  font-size: 15px;
+  /* iOS safe-area */
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+button, input, select, textarea { font-family: inherit; }
+input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
+
+/* ── 헤더 ── */
+.app-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--primary);
+  color: #fff;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.app-header h1 { margin: 0; font-size: 1.1rem; font-weight: 700; flex: 1; }
+.header-right { display: flex; align-items: center; gap: 6px; }
+.sync-status {
+  font-size: .72rem;
+  min-width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: .9;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  border: none; background: rgba(255,255,255,.18); color: #fff;
+  border-radius: 8px;
+  cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:active { background: rgba(255,255,255,.32); }
+.icon-btn.active { background: #fff; color: var(--primary); }
+
+/* ── 상위 탭 ── */
+.top-tabs {
+  position: sticky; top: 60px; z-index: 49;
+  display: flex; background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.top-tab {
+  flex: 1; padding: 12px;
+  background: transparent; border: none;
+  font-size: .95rem; font-weight: 600; color: var(--muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+}
+.top-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* ── 미니 탭 (승호/승아/승승) ── */
+.mini-tabs {
+  position: sticky; top: 109px; z-index: 48;
+  display: flex; gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.mini-tab {
+  padding: 6px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: .85rem; font-weight: 500; color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mini-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ── 메인 ── */
+.app-main { padding: 12px 12px 80px; }
+.tab-panel.hidden { display: none; }
+
+/* ── 상세 탭 ── */
+.day-section { margin-bottom: 18px; }
+.day-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 4px 8px;
+}
+.day-name { font-size: 1rem; font-weight: 700; }
+.btn-add {
+  background: var(--primary); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 6px 12px;
+  font-size: .82rem; font-weight: 600;
+  cursor: pointer;
+}
+.btn-add:active { background: var(--primary-dark); }
+.day-rows { display: flex; flex-direction: column; gap: 10px; }
+
+.row-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 36px 10px 10px;   /* 오른쪽 여백은 × 버튼 자리 */
+  position: relative;
+}
+/* 한 줄에 가능한 한 많은 필드를 — flex wrap 으로 모바일에서 자연 줄바꿈 */
+.row-card .row-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.row-card .row-row + .row-row,
+.row-card .palette { margin-top: 6px; }
+
+.row-card input[type="text"],
+.row-card input[type="time"],
+.row-card select {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font-size: 15px;
+  min-width: 0;     /* flex 내에서 텍스트가 흘러나오는 걸 막음 */
+}
+/* 각 필드 폭 — 모바일에서 우선 가독성 좋게 */
+.row-card .f-kind    { flex: 0 0 78px; }
+.row-card .f-content { flex: 1 1 120px; }
+.row-card .f-start,
+.row-card .f-end     { flex: 0 0 100px; }
+.row-card .f-place,
+.row-card .f-memo    { flex: 1 1 140px; }
+
+.row-delete {
+  position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px;
+  border: none; background: transparent;
+  border-radius: 50%;
+  color: var(--danger); font-size: 18px;
+  cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.row-delete:active { background: #fef2f2; }
+
+/* 색상 팔레트 — 작은 strip, 한 줄 */
+.palette {
+  display: flex; gap: 5px; flex-wrap: wrap;
+}
+.palette-swatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+.palette-swatch.selected {
+  border-color: var(--text);
+  outline-color: var(--text);
+}
+
+/* ── 저장 FAB (상세 탭 전용) ── */
+.fab-save {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 40;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 36px;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, .4);
+  cursor: pointer;
+  min-width: 140px;
+}
+.fab-save:active { background: var(--primary-dark); }
+.fab-save:disabled { opacity: .7; cursor: default; }
+.fab-save.saved {
+  background: #16a34a;
+  box-shadow: 0 6px 18px rgba(22, 163, 74, .4);
+}
+.fab-save.error {
+  background: var(--danger);
+  box-shadow: 0 6px 18px rgba(220, 38, 38, .4);
+}
+body.read-only .fab-save { display: none; }
+/* 시간표 탭일 때는 상세 패널이 display:none 이라 FAB 도 자연 사라짐 */
+
+/* ── 시간표 격자 ── */
+.grid-wrap { overflow-x: auto; }
+.grid-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+.timetable {
+  display: grid;
+  /* 첫 컬럼: 시간 라벨. 나머지 6: 월~토 */
+  grid-template-columns: 56px repeat(6, minmax(72px, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.tt-cell {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  min-height: 28px;
+}
+.tt-cell:last-child { border-right: none; }
+.tt-head {
+  background: #fce7f3;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px 4px;
+  font-size: .85rem;
+  position: sticky; top: 0;
+  z-index: 1;
+}
+.tt-time {
+  background: #fce7f3;
+  font-size: .7rem;
+  color: var(--muted);
+  text-align: right;
+  padding: 2px 5px;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--border);
+}
+.tt-time.hour { font-weight: 700; font-size: .78rem; color: var(--text); }
+.tt-time.half { font-size: .6rem; color: rgba(0,0,0,.45); }
+
+/* 정시(매시 정각) 가로선 — entry 의 컬러 위에 오버레이로 노출.
+   행 경계의 위쪽에 정확히 얹어, 색깔 안에서도 시간대 한눈에 보임. */
+.tt-hour-line {
+  border-top: 1px solid rgba(0,0,0,.45);
+  pointer-events: none;
+  z-index: 3;
+}
+/* entry 셀 — JS 가 grid-row 로 시작/종료 배치 */
+.tt-entry {
+  margin: 1px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: .78rem;
+  color: #1f2937;
+  display: flex; flex-direction: column; gap: 2px;
+  overflow: hidden;
+  cursor: default;
+}
+.tt-entry strong { font-weight: 700; line-height: 1.15; }
+.tt-entry small { font-size: .68rem; color: #4b5563; line-height: 1.15; }
+/* entry 안의 시작~종료 시간 라벨 — 좌상단 muted */
+.tt-time-range {
+  display: block;
+  font-size: .62rem;
+  color: rgba(0,0,0,.55);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.tt-half .tt-time-range { font-size: .55rem; }
+/* 승승: 좌/우 분할 셀 */
+.tt-half {
+  margin: 1px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  font-size: .65rem;
+  color: #1f2937;
+  overflow: hidden;
+  line-height: 1.1;
+}
+.tt-divider {
+  border-left: 1px dashed var(--border);
+  pointer-events: none;
+}
+
+/* ── 읽기 전용 모드 ── */
+body.read-only .btn-add,
+body.read-only .row-delete { display: none !important; }
+body.read-only .row-card input,
+body.read-only .row-card select,
+body.read-only .row-card textarea { pointer-events: none; background: #f8fafc; }
+body.read-only .palette-swatch { pointer-events: none; }
+
+/* ── 동기화 상태 색 ── */
+.sync-status.pending  { color: #fef3c7; }
+.sync-status.saving   { color: #fef3c7; }
+.sync-status.saved    { color: #d1fae5; }
+.sync-status.error    { color: #fee2e2; }
+.sync-status.readonly { opacity: .6; }
+
+/* ── 데스크탑 — 넉넉할 땐 한 줄에 더 많이 ── */
+@media (min-width: 640px) {
+  .row-card .f-content { flex: 1 1 200px; }
+  .row-card .f-place,
+  .row-card .f-memo    { flex: 1 1 200px; }
+}

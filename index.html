@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>주간 시간표</title>
+<link rel="stylesheet" href="assets/app.css" />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#ec4899" />
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+
+<!-- iOS Safari 홈 화면 추가 -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="시간표" />
+<link rel="apple-touch-icon" href="assets/icon.svg" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>주간 시간표</h1>
+  <div class="header-right">
+    <span class="sync-status" id="syncStatus"></span>
+    <button class="icon-btn" id="btnEdit" title="편집 잠금/해제" aria-label="편집">🔒</button>
+  </div>
+</header>
+
+<nav class="top-tabs" role="tablist" aria-label="상위 탭">
+  <button class="top-tab active" role="tab" data-tab="detail" aria-selected="true">상세</button>
+  <button class="top-tab" role="tab" data-tab="grid" aria-selected="false">시간표</button>
+</nav>
+
+<nav class="mini-tabs" id="miniTabs" role="tablist" aria-label="아이">
+  <!-- JS 가 활성 탭에 따라 채움 (상세: 승호/승아, 시간표: 승호/승아/승승) -->
+</nav>
+
+<main class="app-main">
+  <!-- 상세 탭 -->
+  <section class="tab-panel" id="tabDetail" data-tab="detail">
+    <div class="detail-list" id="detailList"></div>
+    <button class="fab-save" id="btnSave" type="button">저장</button>
+  </section>
+
+  <!-- 시간표 탭 -->
+  <section class="tab-panel hidden" id="tabGrid" data-tab="grid">
+    <div class="grid-wrap" id="gridWrap"></div>
+  </section>
+</main>
+
+<script src="assets/app.js"></script>
+<script>
+  // service worker 등록 (file:// 에서는 동작 안 함 — http(s) 에서만)
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
