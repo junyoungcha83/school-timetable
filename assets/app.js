@@ -30,7 +30,7 @@ const PALETTE = [
 function DEFAULT_STATE() { return { version: 1, entries: [] }; }
 
 let state = DEFAULT_STATE();
-let activeTab = 'detail';        // 'detail' | 'grid'
+let activeTab = 'grid';          // 'detail' | 'grid'
 let activeChild = 'seungho';     // 'seungho' | 'seunga' | 'seungseung' (grid 전용)
 
 // ── 유틸 ─────────────────────────────────────────

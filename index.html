@@ -28,8 +28,8 @@
 </header>
 
 <nav class="top-tabs" role="tablist" aria-label="상위 탭">
-  <button class="top-tab active" role="tab" data-tab="detail" aria-selected="true">상세</button>
-  <button class="top-tab" role="tab" data-tab="grid" aria-selected="false">시간표</button>
+  <button class="top-tab active" role="tab" data-tab="grid" aria-selected="true">시간표</button>
+  <button class="top-tab" role="tab" data-tab="detail" aria-selected="false">상세</button>
 </nav>
 
 <nav class="mini-tabs" id="miniTabs" role="tablist" aria-label="아이">
@@ -38,13 +38,13 @@
 
 <main class="app-main">
   <!-- 상세 탭 -->
-  <section class="tab-panel" id="tabDetail" data-tab="detail">
+  <section class="tab-panel hidden" id="tabDetail" data-tab="detail">
     <div class="detail-list" id="detailList"></div>
     <button class="fab-save" id="btnSave" type="button">저장</button>
   </section>
 
   <!-- 시간표 탭 -->
-  <section class="tab-panel hidden" id="tabGrid" data-tab="grid">
+  <section class="tab-panel" id="tabGrid" data-tab="grid">
     <div class="grid-wrap" id="gridWrap"></div>
   </section>
 </main>
