@@ -217,8 +217,9 @@ body.read-only .fab-save { display: none; }
 }
 .timetable {
   display: grid;
-  /* 첫 컬럼: 시간 라벨. 나머지 6: 월~토 */
-  grid-template-columns: 56px repeat(6, minmax(72px, 1fr));
+  /* 첫 컬럼: 시간 라벨(40px). 나머지 6: 월~토 — 남은 폭 균등 분배(가로 오버플로 없이 한 화면에). */
+  grid-template-columns: 40px repeat(6, 1fr);
+  width: 100%;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--card);
@@ -235,19 +236,22 @@ body.read-only .fab-save { display: none; }
   background: #fce7f3;
   font-weight: 700;
   text-align: center;
-  padding: 8px 4px;
-  font-size: .85rem;
+  padding: 8px 2px;
+  font-size: .82rem;
   position: sticky; top: 0;
   z-index: 1;
 }
+/* 좌측 시간 열(코너 포함) — 가로로 살짝 넘쳐도 항상 왼쪽에 고정 */
+.tt-head:first-child { position: sticky; left: 0; top: 0; z-index: 3; }
 .tt-time {
   background: #fce7f3;
-  font-size: .7rem;
+  font-size: .68rem;
   color: var(--muted);
-  text-align: right;
-  padding: 2px 5px;
+  text-align: center;
+  padding: 2px 3px;
   font-variant-numeric: tabular-nums;
   border-right: 1px solid var(--border);
+  position: sticky; left: 0; z-index: 2;
 }
 .tt-time.hour { font-weight: 700; font-size: .78rem; color: var(--text); }
 .tt-time.half { font-size: .6rem; color: rgba(0,0,0,.45); }
@@ -262,34 +266,47 @@ body.read-only .fab-save { display: none; }
 /* entry 셀 — JS 가 grid-row 로 시작/종료 배치 */
 .tt-entry {
   margin: 1px;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-radius: 6px;
-  font-size: .78rem;
+  font-size: .72rem;
   color: #1f2937;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 1px;
   overflow: hidden;
   cursor: default;
+  word-break: keep-all;            /* 한글은 어절 단위 우선 줄바꿈 */
+  overflow-wrap: anywhere;
 }
-.tt-entry strong { font-weight: 700; line-height: 1.15; }
-.tt-entry small { font-size: .68rem; color: #4b5563; line-height: 1.15; }
-/* entry 안의 시작~종료 시간 라벨 — 좌상단 muted */
+/* 내용 — 최대 2줄, 넘치면 말줄임(글자 중간 잘림 방지) */
+.tt-entry strong, .tt-half strong {
+  font-weight: 700; line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tt-entry small {
+  font-size: .64rem; color: #4b5563; line-height: 1.15;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* entry 안의 시작~종료 시간 라벨 — 좁은 칸이면 자연 줄바꿈 */
 .tt-time-range {
   display: block;
-  font-size: .62rem;
-  color: rgba(0,0,0,.55);
-  line-height: 1.1;
+  font-size: .58rem;
+  color: rgba(0,0,0,.6);
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
+  white-space: normal; word-break: break-all;
 }
-.tt-half .tt-time-range { font-size: .55rem; }
+.tt-half .tt-time-range { font-size: .5rem; }
 /* 승승: 좌/우 분할 셀 */
 .tt-half {
   margin: 1px;
-  padding: 3px 4px;
+  padding: 2px 3px;
   border-radius: 6px;
-  font-size: .65rem;
+  font-size: .58rem;
   color: #1f2937;
+  display: flex; flex-direction: column; gap: 1px;
   overflow: hidden;
   line-height: 1.1;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .tt-divider {
   border-left: 1px dashed var(--border);

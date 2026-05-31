@@ -508,18 +508,20 @@ function renderGrid() {
     return;
   }
 
-  // 시간 범위 — 15분 단위 스냅
-  const SLOT = 15;
-  let minT = Math.min(...items.map(e => Math.floor(parseTimeMin(e.start) / SLOT) * SLOT));
-  let maxT = Math.max(...items.map(e => Math.ceil( parseTimeMin(e.end)   / SLOT) * SLOT));
-  // 격자가 최소 4슬롯은 되도록 살짝 여유
+  // 한 칸 = 30분. 30분 단위가 아닌 시각은 15분 기준 스냅(분≤15 → 정시쪽, 분>15 → 30분쪽).
+  // ※ 스냅은 '격자 배치'에만 적용 — 블록 라벨에는 실제 시작~종료 시간을 그대로 표시(혼동 방지).
+  const SLOT = 30;
+  const snap30 = m => { const r = ((m % SLOT) + SLOT) % SLOT; return r <= 15 ? m - r : m - r + SLOT; };
+  let minT = Math.min(...items.map(e => snap30(parseTimeMin(e.start))));
+  let maxT = Math.max(...items.map(e => snap30(parseTimeMin(e.end))));
+  // 격자가 최소 4슬롯(=2시간)은 되도록 살짝 여유
   if (maxT - minT < SLOT * 4) maxT = minT + SLOT * 4;
   const slots = Math.round((maxT - minT) / SLOT);
 
   const tt = document.createElement('div');
   tt.className = 'timetable';
-  // grid: 헤더 1행 + slots 행
-  tt.style.gridTemplateRows = `auto repeat(${slots}, 28px)`;
+  // grid: 헤더 1행 + slots 행 (한 칸 40px — 줄바꿈 텍스트 수용)
+  tt.style.gridTemplateRows = `auto repeat(${slots}, 40px)`;
 
   // 헤더: 빈칸 + 요일
   tt.innerHTML = `<div class="tt-cell tt-head"></div>` +
@@ -539,13 +541,12 @@ function renderGrid() {
   }
   wrap.appendChild(tt);
 
-  // entry 배치
-  const SLOT_PX = 28;
+  // entry 배치 — 스냅된 30분 격자에 배치(라벨 텍스트는 실제 시각)
   for (const e of items) {
     const s = parseTimeMin(e.start);
     const x = parseTimeMin(e.end);
-    const rowStart = Math.round((s - minT) / SLOT) + 2;   // 헤더 행이 1
-    const rowEnd   = Math.round((x - minT) / SLOT) + 2;
+    const rowStart = Math.round((snap30(s) - minT) / SLOT) + 2;   // 헤더 행이 1
+    const rowEnd   = Math.max(rowStart + 1, Math.round((snap30(x) - minT) / SLOT) + 2);
     const dayIdx = DAYS.findIndex(d => d.id === e.day);
     if (dayIdx < 0) continue;
 
