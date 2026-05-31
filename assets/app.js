@@ -519,7 +519,7 @@ function renderGrid() {
   const slots = Math.round((maxT - minT) / SLOT);
 
   const tt = document.createElement('div');
-  tt.className = 'timetable';
+  tt.className = 'timetable' + (isSeungseung ? ' seungseung' : '');
   // grid: 헤더 1행 + slots 행 (한 칸 40px — 줄바꿈 텍스트 수용)
   tt.style.gridTemplateRows = `auto repeat(${slots}, 40px)`;
 

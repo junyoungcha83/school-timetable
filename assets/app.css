@@ -209,7 +209,15 @@ body.read-only .fab-save { display: none; }
 /* 시간표 탭일 때는 상세 패널이 display:none 이라 FAB 도 자연 사라짐 */
 
 /* ── 시간표 격자 ── */
-.grid-wrap { overflow-x: auto; }
+/* 시간표 스크롤 박스 — 이 박스가 가로/세로 스크롤 컨테이너.
+   요일 헤더행(sticky top)과 시간 열(sticky left)이 이 박스 기준으로 고정된다. */
+.grid-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100dvh - 168px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
 .grid-empty {
   padding: 60px 20px;
   text-align: center;
@@ -220,10 +228,8 @@ body.read-only .fab-save { display: none; }
   /* 첫 컬럼: 시간 라벨(40px). 나머지 6: 월~토 — 남은 폭 균등 분배(가로 오버플로 없이 한 화면에). */
   grid-template-columns: 40px repeat(6, 1fr);
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 12px;
   background: var(--card);
-  overflow: hidden;
+  /* overflow:hidden 제거 — 있으면 sticky 셀(시간 열·요일행)이 갇혀 고정이 안 됨. */
 }
 .tt-cell {
   border-right: 1px solid var(--border);
@@ -238,11 +244,11 @@ body.read-only .fab-save { display: none; }
   text-align: center;
   padding: 8px 2px;
   font-size: .82rem;
-  position: sticky; top: 0;
-  z-index: 1;
+  position: sticky; top: 0;        /* 요일 헤더행 — 세로 스크롤 시 상단 고정 */
+  z-index: 4;
 }
-/* 좌측 시간 열(코너 포함) — 가로로 살짝 넘쳐도 항상 왼쪽에 고정 */
-.tt-head:first-child { position: sticky; left: 0; top: 0; z-index: 3; }
+/* 좌상단 코너 — 가로·세로 스크롤 모두에 고정(헤더행·시간열보다 위) */
+.tt-head:first-child { position: sticky; left: 0; top: 0; z-index: 6; }
 .tt-time {
   background: #fce7f3;
   font-size: .68rem;
@@ -251,7 +257,8 @@ body.read-only .fab-save { display: none; }
   padding: 2px 3px;
   font-variant-numeric: tabular-nums;
   border-right: 1px solid var(--border);
-  position: sticky; left: 0; z-index: 2;
+  position: sticky; left: 0;       /* 시간 열 — 가로 스크롤 시 좌측 고정 */
+  z-index: 5;
 }
 .tt-time.hour { font-weight: 700; font-size: .78rem; color: var(--text); }
 .tt-time.half { font-size: .6rem; color: rgba(0,0,0,.45); }
@@ -312,6 +319,10 @@ body.read-only .fab-save { display: none; }
   border-left: 1px dashed var(--border);
   pointer-events: none;
 }
+/* 승승 모드: 요일(컬럼) 경계선을 조금 진하게 — 두 아이가 한 칸에 들어가도 요일 구분 명확 */
+.timetable.seungseung .tt-cell { border-right-color: rgba(0,0,0,.26); }
+/* 한 요일 안 승호|승아 가운데 분리선은 점선으로 또렷이(요일 경계와 구분) */
+.timetable.seungseung .tt-divider { border-left-color: rgba(0,0,0,.32); }
 
 /* ── 읽기 전용 모드 ── */
 body.read-only .btn-add,
