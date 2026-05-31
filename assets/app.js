@@ -523,22 +523,29 @@ function renderGrid() {
   // grid: 헤더 1행 + slots 행 (한 칸 40px — 줄바꿈 텍스트 수용)
   tt.style.gridTemplateRows = `auto repeat(${slots}, 40px)`;
 
-  // 헤더: 빈칸 + 요일
-  tt.innerHTML = `<div class="tt-cell tt-head"></div>` +
-    DAYS.map(d => `<div class="tt-cell tt-head">${d.short}</div>`).join('');
-
-  // 시간 라벨 + 빈 셀 — 정시는 큰 굵은 글씨('08:00'), 30분은 작은 보조('30')
+  // ★ 모든 배경 칸을 '명시 배치'(grid-column/row 지정)로 둔다.
+  //   entry 들이 명시 배치라, 배경 칸을 auto-placement 로 두면 grid 가 entry 를 먼저 놓고
+  //   배경 칸이 그 주위로 밀려 흐르며 시간 열·격자가 어긋난다. 전부 명시하면 정렬이 고정됨.
+  let html = '';
+  // 헤더(1행): 좌상단 빈칸 + 요일
+  html += `<div class="tt-cell tt-head" style="grid-column:1;grid-row:1"></div>`;
+  DAYS.forEach((d, di) => {
+    html += `<div class="tt-cell tt-head" style="grid-column:${di + 2};grid-row:1">${d.short}</div>`;
+  });
+  // 시간 라벨(1열) + 빈 셀 — 정시는 큰 굵은 글씨('08:00'), 30분은 작은 보조('30')
   for (let i = 0; i < slots; i++) {
+    const row = i + 2;
     const t = minT + i * SLOT;
     const minOfHour = t % 60;
     let label = '', cls = '';
     if (minOfHour === 0)       { label = fmtMin(t); cls = ' hour'; }
     else if (minOfHour === 30) { label = '30';      cls = ' half'; }
-    tt.innerHTML += `<div class="tt-cell tt-time${cls}">${label}</div>`;
+    html += `<div class="tt-cell tt-time${cls}" style="grid-column:1;grid-row:${row}">${label}</div>`;
     for (let d = 0; d < DAYS.length; d++) {
-      tt.innerHTML += `<div class="tt-cell" data-day="${DAYS[d].id}" data-slot="${i}"></div>`;
+      html += `<div class="tt-cell" data-day="${DAYS[d].id}" data-slot="${i}" style="grid-column:${d + 2};grid-row:${row}"></div>`;
     }
   }
+  tt.innerHTML = html;
   wrap.appendChild(tt);
 
   // entry 배치 — 스냅된 30분 격자에 배치(라벨 텍스트는 실제 시각)
