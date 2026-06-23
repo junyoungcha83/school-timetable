@@ -435,6 +435,11 @@ body.read-only .palette-swatch { pointer-events: none; }
   padding:10px; color:var(--text); background:#fff; }
 .ev-sheet-body input[type=color] { padding:3px; height:44px; }
 .ev-row2 { display:flex; gap:10px; } .ev-row2>div { flex:1; }
+.ev-member-row { display:flex; align-items:center; gap:8px; }
+.ev-member-row .ev-chips { flex:1; }
+.ev-color-in { flex:none; width:38px; height:32px; padding:0; border:1px solid var(--border);
+  border-radius:8px; background:#fff; cursor:pointer; }
+.ev-color-in:disabled { opacity:.5; cursor:default; }
 .ev-chips { display:flex; flex-wrap:wrap; gap:6px; }
 .ev-chip { border:1px solid var(--border); border-radius:999px; padding:6px 12px; font-size:.85rem;
   font-weight:700; background:#fff; color:var(--text); cursor:pointer; }

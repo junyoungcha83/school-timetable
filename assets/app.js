@@ -204,6 +204,7 @@ function migrate(loaded) {
     ev.startTime = typeof ev.startTime === 'string' ? ev.startTime : (ev.time || '');
     ev.endTime = typeof ev.endTime === 'string' ? ev.endTime : '';
     ev.memberId = ev.memberId || null;
+    ev.color = (typeof ev.color === 'string' && /^#[0-9a-f]{6}$/i.test(ev.color)) ? ev.color : '';
     ev.memo = typeof ev.memo === 'string' ? ev.memo : '';
     ev.created_at = ev.created_at || nowIso();
     ev.updated_at = ev.updated_at || ev.created_at;
@@ -325,8 +326,9 @@ function setActiveTab(t) {
   });
   // 미니탭(아이 선택)은 시간표/상세에서만
   const isChildTab = (t === 'grid' || t === 'detail');
-  document.getElementById('miniTabs').classList.toggle('hidden', !isChildTab);
-  if (isChildTab) renderMiniTabs();
+  const mt = document.getElementById('miniTabs');
+  if (isChildTab) { mt.classList.remove('hidden'); renderMiniTabs(); }
+  else            { mt.classList.add('hidden'); mt.innerHTML = ''; }
   render();
 }
 function setActiveChild(c) {
@@ -647,6 +649,7 @@ function ymdLocal(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).pad
 function todayYmd() { return ymdLocal(new Date()); }
 function memberById(id) { return state.members.find(m => m.id === id); }
 function memberColor(id) { return memberById(id)?.color || '#cbd5e1'; }
+function evColor(ev) { return ev.color || memberColor(ev.memberId); }   // 일정별 색상 우선, 없으면 담당가족 색
 function evUid() { return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function saveEvents() { saveLocal(); }   // 전체 state 를 서버에 푸시(기존 동기화 재사용)
 
@@ -666,7 +669,7 @@ function evTimeText(ev) {
   return '종일';
 }
 function evRowEl(ev) {
-  const c = memberColor(ev.memberId), mem = memberById(ev.memberId);
+  const c = evColor(ev), mem = memberById(ev.memberId);
   const row = document.createElement('div');
   row.className = 'ev-row'; row.style.borderLeftColor = c;
   row.innerHTML =
@@ -750,7 +753,7 @@ function renderCalGrid() {
       bar.style.left  = 'calc(' + (it.sCol/7*100) + '% + 1px)';
       bar.style.width = 'calc(' + (it.span/7*100) + '% - 3px)';
       bar.style.top   = (it.lane*LANE_H) + 'px';
-      bar.style.background = memberColor(it.ev.memberId);
+      bar.style.background = evColor(it.ev);
       const single = !it.ev.endDate || it.ev.endDate === it.ev.startDate;
       const prefix = (single && it.ev.startTime) ? it.ev.startTime+' ' : '';
       bar.textContent = prefix + (it.ev.title || '');
@@ -836,8 +839,9 @@ function openEvt(ev) {
   document.getElementById('evEndTime').value = ev ? (ev.endTime||'') : '';
   document.getElementById('evMemoIn').value = ev ? (ev.memo||'') : '';
   evMemberSel = ev ? (ev.memberId||null) : null;
+  document.getElementById('evColorIn').value = ev ? evColor(ev) : '#fca5a5';
   renderEvMemberChips();
-  ['evTitleIn','evStartDate','evStartTime','evEndDate','evEndTime','evMemoIn'].forEach(id => document.getElementById(id).disabled = ro);
+  ['evTitleIn','evStartDate','evStartTime','evEndDate','evEndTime','evMemoIn','evColorIn'].forEach(id => document.getElementById(id).disabled = ro);
   document.getElementById('evSaveBtn').classList.toggle('hidden', ro);
   document.getElementById('evDeleteBtn').classList.toggle('hidden', !ev || ro);
   document.getElementById('evModal').classList.remove('hidden');
@@ -848,7 +852,13 @@ function renderEvMemberChips() {
   const mk = (id,name,color) => {
     const b = document.createElement('button'); b.className='ev-chip'; b.textContent=name;
     if (evMemberSel===id) { b.style.background = color||'#e5e7eb'; b.style.borderColor = color||'#e5e7eb'; }
-    b.onclick = () => { if(ro) return; evMemberSel = (evMemberSel===id?null:id); renderEvMemberChips(); };
+    b.onclick = () => {
+      if(ro) return;
+      evMemberSel = (evMemberSel===id?null:id);
+      // 담당가족 선택 시 일정 색을 그 가족 색으로 맞춰줌(이후 색버튼으로 자유 변경 가능)
+      if (evMemberSel && color) document.getElementById('evColorIn').value = color;
+      renderEvMemberChips();
+    };
     box.appendChild(b);
   };
   mk(null,'공용',null);
@@ -865,7 +875,8 @@ function saveEvt() {
   const data = { title, startDate:sd, endDate:ed,
     startTime:document.getElementById('evStartTime').value||'',
     endTime:document.getElementById('evEndTime').value||'',
-    memberId:evMemberSel, memo:document.getElementById('evMemoIn').value.trim() };
+    memberId:evMemberSel, color:document.getElementById('evColorIn').value || '',
+    memo:document.getElementById('evMemoIn').value.trim() };
   const ev = editingEvId ? state.events.find(e=>e.id===editingEvId) : null;
   if (ev) Object.assign(ev, data, { updated_at:ts });
   else state.events.push(Object.assign({ id:evUid(), created_at:ts, updated_at:ts }, data));

@@ -86,8 +86,11 @@
         <div><label>종료일</label><input id="evEndDate" type="date" /></div>
         <div><label>종료시간 <small>(선택)</small></label><input id="evEndTime" type="time" /></div>
       </div>
-      <label>담당 가족</label>
-      <div id="evMemberChips" class="ev-chips"></div>
+      <label>담당 가족 <small>· 색상</small></label>
+      <div class="ev-member-row">
+        <div id="evMemberChips" class="ev-chips"></div>
+        <input id="evColorIn" type="color" class="ev-color-in" value="#fca5a5" title="일정 색상" />
+      </div>
       <label>메모 <small>(선택)</small></label>
       <textarea id="evMemoIn" rows="2" placeholder="장소·준비물 등"></textarea>
       <div class="ev-actions">
