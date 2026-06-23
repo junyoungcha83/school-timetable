@@ -83,6 +83,7 @@ input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
 }
+.mini-tabs.hidden { display: none; }   /* 달력·목록 탭에선 승호/승아 미니탭 숨김 */
 .mini-tab {
   padding: 6px 14px;
   background: #fff;
