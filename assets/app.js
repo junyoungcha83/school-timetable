@@ -695,24 +695,78 @@ function renderCalGrid() {
   const y = calView.getFullYear(), m = calView.getMonth();
   const start = new Date(y, m, 1); start.setDate(1 - start.getDay());
   const today = todayYmd();
-  for (let i=0;i<42;i++) {
-    const d = new Date(start); d.setDate(start.getDate()+i);
-    const ds = ymdLocal(d), dow = d.getDay();
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell' + (d.getMonth()!==m?' oth':'') + (dow===0?' sun':dow===6?' sat':'')
-      + (ds===today?' today':'') + (ds===calSel?' sel':'');
-    cell.innerHTML = '<span class="cdn">'+d.getDate()+'</span>';
-    const evs = eventsOnDate(ds);
-    evs.slice(0,3).forEach(ev => {
-      const chip = document.createElement('div');
-      chip.className = 'cal-chip'; chip.style.background = memberColor(ev.memberId);
-      const showTime = ev.startTime && ev.startDate === ds && (!ev.endDate || ev.endDate === ev.startDate);
-      chip.textContent = (showTime ? ev.startTime+' ' : '') + (ev.title || '');
-      cell.appendChild(chip);
+  const LANES = 3, DNUM_H = 18, LANE_H = 15;   // 표시 가능한 막대 줄 수 / 날짜숫자·막대 높이(px)
+
+  for (let w=0; w<6; w++) {
+    const days = [];
+    for (let i=0;i<7;i++) { const d = new Date(start); d.setDate(start.getDate()+w*7+i); days.push(d); }
+    const dsList = days.map(ymdLocal);
+    const wStart = dsList[0], wEnd = dsList[6];
+
+    // 이 주와 겹치는 일정 → 주 내에서의 시작/끝 열(column) 계산
+    const weekEvs = state.events
+      .filter(ev => ev.startDate && ev.startDate <= wEnd && (ev.endDate || ev.startDate) >= wStart)
+      .map(ev => {
+        const ed = ev.endDate || ev.startDate;
+        let sCol = dsList.findIndex(ds => ds >= ev.startDate); if (sCol < 0) sCol = 0;
+        let eCol = 6; for (let i=6;i>=0;i--) { if (dsList[i] <= ed) { eCol = i; break; } }
+        return { ev, sCol, eCol, span: eCol - sCol + 1,
+                 contL: ev.startDate < wStart, contR: ed > wEnd };
+      })
+      .sort((a,b) => a.sCol - b.sCol || b.span - a.span ||
+                     (a.ev.startTime||'99').localeCompare(b.ev.startTime||'99'));
+
+    // 레인(줄) 배정 — 같은 주 안에서 겹치지 않게 그리디 배치
+    const laneEnd = [];
+    for (const it of weekEvs) {
+      let lane = laneEnd.findIndex(end => end < it.sCol);
+      if (lane < 0) { lane = laneEnd.length; }
+      laneEnd[lane] = it.eCol;
+      it.lane = lane;
+    }
+    const usedLanes = Math.min(LANES, laneEnd.length);
+
+    const wrow = document.createElement('div'); wrow.className = 'cal-wrow';
+    wrow.style.minHeight = Math.max(58, DNUM_H + usedLanes*LANE_H + 6) + 'px';
+
+    // 날짜 칸(배경·날짜숫자·선택)
+    days.forEach((d, i) => {
+      const ds = dsList[i], dow = d.getDay();
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (d.getMonth()!==m?' oth':'') + (dow===0?' sun':dow===6?' sat':'')
+        + (ds===today?' today':'') + (ds===calSel?' sel':'');
+      cell.innerHTML = '<span class="cdn">'+d.getDate()+'</span>';
+      cell.onclick = () => { calSel = ds; renderCal(); };
+      wrow.appendChild(cell);
     });
-    if (evs.length>3) { const mo=document.createElement('div'); mo.className='cal-more'; mo.textContent='+'+(evs.length-3); cell.appendChild(mo); }
-    cell.onclick = () => { calSel = ds; renderCal(); };
-    grid.appendChild(cell);
+
+    // 막대(연속 일정은 한 줄로 길게) + 넘치는 일정 +N
+    const bars = document.createElement('div'); bars.className = 'cal-bars'; bars.style.top = DNUM_H+'px';
+    const moreCount = new Array(7).fill(0);
+    for (const it of weekEvs) {
+      if (it.lane >= LANES) { for (let c=it.sCol;c<=it.eCol;c++) moreCount[c]++; continue; }
+      const bar = document.createElement('div');
+      bar.className = 'cal-bar2' + (it.contL?' cont-l':'') + (it.contR?' cont-r':'');
+      bar.style.left  = 'calc(' + (it.sCol/7*100) + '% + 1px)';
+      bar.style.width = 'calc(' + (it.span/7*100) + '% - 3px)';
+      bar.style.top   = (it.lane*LANE_H) + 'px';
+      bar.style.background = memberColor(it.ev.memberId);
+      const single = !it.ev.endDate || it.ev.endDate === it.ev.startDate;
+      const prefix = (single && it.ev.startTime) ? it.ev.startTime+' ' : '';
+      bar.textContent = prefix + (it.ev.title || '');
+      bar.onclick = (e) => { e.stopPropagation(); openEvt(it.ev); };
+      bars.appendChild(bar);
+    }
+    moreCount.forEach((n, i) => {
+      if (!n) return;
+      const mo = document.createElement('div'); mo.className = 'cal-more2';
+      mo.textContent = '+'+n;
+      mo.style.left = 'calc(' + (i/7*100) + '% + 2px)';
+      mo.style.top  = (LANES*LANE_H) + 'px';
+      bars.appendChild(mo);
+    });
+    wrow.appendChild(bars);
+    grid.appendChild(wrow);
   }
 }
 function renderCalDay() {
