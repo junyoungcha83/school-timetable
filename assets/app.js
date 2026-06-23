@@ -27,11 +27,19 @@ const PALETTE = [
   '#c4b5fd', '#fdba74', '#67e8f9', '#d1d5db',
 ];
 
-function DEFAULT_STATE() { return { version: 1, entries: [] }; }
+function DEFAULT_STATE() { return { version: 1, entries: [], events: [], members: [] }; }
 
 let state = DEFAULT_STATE();
-let activeTab = 'grid';          // 'detail' | 'grid'
+let activeTab = 'grid';          // 'detail' | 'grid' | 'calendar' | 'list'
 let activeChild = 'seungho';     // 'seungho' | 'seunga' | 'seungseung' (grid 전용)
+
+// 달력/목록(가족스케줄) 상태
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+let calView = (() => { const d = new Date(); d.setDate(1); return d; })();
+let calSel = null;               // 선택한 날짜 'YYYY-MM-DD'
+let evShowPast = false;          // 목록: 지난 일정 펼침
+let editingEvId = null;
+let evMemberSel = null;          // 일정 모달에서 선택된 담당자 id
 
 // ── 유틸 ─────────────────────────────────────────
 function nowIso() { return new Date().toISOString(); }
@@ -186,6 +194,24 @@ function migrate(loaded) {
     e.created_at = e.created_at || nowIso();
     e.updated_at = e.updated_at || e.created_at;
   }
+  // 가족스케줄: events / members 정규화(없으면 빈 배열 유지)
+  if (!Array.isArray(loaded.events)) loaded.events = [];
+  if (!Array.isArray(loaded.members)) loaded.members = [];
+  for (const ev of loaded.events) {
+    ev.title = typeof ev.title === 'string' ? ev.title : '';
+    ev.startDate = typeof ev.startDate === 'string' ? ev.startDate : (ev.date || '');
+    ev.endDate = typeof ev.endDate === 'string' && ev.endDate ? ev.endDate : ev.startDate;
+    ev.startTime = typeof ev.startTime === 'string' ? ev.startTime : (ev.time || '');
+    ev.endTime = typeof ev.endTime === 'string' ? ev.endTime : '';
+    ev.memberId = ev.memberId || null;
+    ev.memo = typeof ev.memo === 'string' ? ev.memo : '';
+    ev.created_at = ev.created_at || nowIso();
+    ev.updated_at = ev.updated_at || ev.created_at;
+  }
+  for (const m of loaded.members) {
+    m.name = typeof m.name === 'string' ? m.name : '';
+    m.color = (typeof m.color === 'string' && /^#[0-9a-f]{6}$/i.test(m.color)) ? m.color : PALETTE[0];
+  }
   return loaded;
 }
 
@@ -282,8 +308,9 @@ function updateEditUI() {
 
 // ── 탭 / 미니탭 ─────────────────────────────────
 function setActiveTab(t) {
-  if (t !== 'detail' && t !== 'grid') return;
+  if (!['detail', 'grid', 'calendar', 'list'].includes(t)) return;
   activeTab = t;
+  try { localStorage.setItem('school-timetable-tab', t); } catch (e) {}
   // 현재 activeChild 가 새 탭에서 유효한지 확인
   if (activeTab === 'detail' && activeChild === 'seungseung') {
     activeChild = 'seungho';
@@ -296,7 +323,10 @@ function setActiveTab(t) {
   document.querySelectorAll('.tab-panel').forEach(p => {
     p.classList.toggle('hidden', p.dataset.tab !== t);
   });
-  renderMiniTabs();
+  // 미니탭(아이 선택)은 시간표/상세에서만
+  const isChildTab = (t === 'grid' || t === 'detail');
+  document.getElementById('miniTabs').classList.toggle('hidden', !isChildTab);
+  if (isChildTab) renderMiniTabs();
   render();
 }
 function setActiveChild(c) {
@@ -320,7 +350,9 @@ function renderMiniTabs() {
 // ── 렌더 ─────────────────────────────────────────
 function render() {
   if (activeTab === 'detail') renderDetail();
-  else                        renderGrid();
+  else if (activeTab === 'grid') renderGrid();
+  else if (activeTab === 'calendar') renderCal();
+  else if (activeTab === 'list') renderEventList();
 }
 
 function renderDetail() {
@@ -609,6 +641,221 @@ function renderGrid() {
   }
 }
 
+// ════════ 달력 / 목록 (가족스케줄 통합) ════════
+function canEdit() { return !!getEditToken(); }
+function ymdLocal(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function todayYmd() { return ymdLocal(new Date()); }
+function memberById(id) { return state.members.find(m => m.id === id); }
+function memberColor(id) { return memberById(id)?.color || '#cbd5e1'; }
+function evUid() { return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function saveEvents() { saveLocal(); }   // 전체 state 를 서버에 푸시(기존 동기화 재사용)
+
+function ddayLabel(date, today) {
+  const diff = Math.round((new Date(date+'T00:00') - new Date(today+'T00:00')) / 86400000);
+  if (diff === 0) return '오늘';
+  if (diff === 1) return '내일';
+  if (diff === -1) return '어제';
+  return diff > 0 ? 'D-' + diff : 'D+' + (-diff);
+}
+function evTimeText(ev) {
+  if (ev.endDate && ev.endDate !== ev.startDate) {
+    const md = s => { const d = new Date(s+'T00:00'); return (d.getMonth()+1)+'/'+d.getDate(); };
+    return md(ev.startDate) + '~' + md(ev.endDate);
+  }
+  if (ev.startTime) return ev.startTime + (ev.endTime ? '~'+ev.endTime : '');
+  return '종일';
+}
+function evRowEl(ev) {
+  const c = memberColor(ev.memberId), mem = memberById(ev.memberId);
+  const row = document.createElement('div');
+  row.className = 'ev-row'; row.style.borderLeftColor = c;
+  row.innerHTML =
+    '<span class="ev-time">' + escapeAttr(evTimeText(ev)) + '</span>' +
+    '<div class="ev-body"><div class="ev-name">' + escapeAttr(ev.title || '(제목 없음)') + '</div>' +
+      (ev.memo ? '<div class="ev-memo">' + escapeAttr(ev.memo) + '</div>' : '') + '</div>' +
+    (mem ? '<span class="ev-who" style="background:'+c+'">' + escapeAttr(mem.name) + '</span>' : '');
+  row.onclick = () => openEvt(ev);
+  return row;
+}
+function eventsOnDate(ds) {
+  return state.events
+    .filter(ev => ev.startDate && ev.startDate <= ds && (ev.endDate || ev.startDate) >= ds)
+    .sort((a,b) => (a.startTime||'99').localeCompare(b.startTime||'99'));
+}
+
+function renderCal() {
+  document.getElementById('calTitle').textContent = calView.getFullYear() + '.' + (calView.getMonth()+1);
+  const wk = document.getElementById('calWeek');
+  if (!wk.children.length) wk.innerHTML = WD.map((d,i)=>'<div class="'+(i===0?'sun':i===6?'sat':'')+'">'+d+'</div>').join('');
+  renderCalGrid();
+  renderCalDay();
+}
+function renderCalGrid() {
+  const grid = document.getElementById('calGrid'); grid.innerHTML = '';
+  const y = calView.getFullYear(), m = calView.getMonth();
+  const start = new Date(y, m, 1); start.setDate(1 - start.getDay());
+  const today = todayYmd();
+  for (let i=0;i<42;i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const ds = ymdLocal(d), dow = d.getDay();
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (d.getMonth()!==m?' oth':'') + (dow===0?' sun':dow===6?' sat':'')
+      + (ds===today?' today':'') + (ds===calSel?' sel':'');
+    cell.innerHTML = '<span class="cdn">'+d.getDate()+'</span>';
+    const evs = eventsOnDate(ds);
+    evs.slice(0,3).forEach(ev => {
+      const chip = document.createElement('div');
+      chip.className = 'cal-chip'; chip.style.background = memberColor(ev.memberId);
+      const showTime = ev.startTime && ev.startDate === ds && (!ev.endDate || ev.endDate === ev.startDate);
+      chip.textContent = (showTime ? ev.startTime+' ' : '') + (ev.title || '');
+      cell.appendChild(chip);
+    });
+    if (evs.length>3) { const mo=document.createElement('div'); mo.className='cal-more'; mo.textContent='+'+(evs.length-3); cell.appendChild(mo); }
+    cell.onclick = () => { calSel = ds; renderCal(); };
+    grid.appendChild(cell);
+  }
+}
+function renderCalDay() {
+  const panel = document.getElementById('calDay');
+  if (!calSel) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden'); panel.innerHTML = '';
+  const d = new Date(calSel+'T00:00');
+  const head = document.createElement('div'); head.className = 'cal-day-head';
+  head.innerHTML = '<strong>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')</strong><span class="cdg"></span>';
+  const add = document.createElement('button'); add.className='cal-day-add'; add.textContent='＋ 일정 추가';
+  add.onclick = () => openEvt(null); head.appendChild(add); panel.appendChild(head);
+  const evs = eventsOnDate(calSel);
+  if (!evs.length) { const e=document.createElement('div'); e.className='ev-empty'; e.textContent='이 날 일정이 없어요.'; panel.appendChild(e); return; }
+  const wrap = document.createElement('div'); wrap.className='ev-group';
+  evs.forEach(ev => wrap.appendChild(evRowEl(ev)));
+  panel.appendChild(wrap);
+}
+
+function renderEventList() {
+  const box = document.getElementById('listView'); box.innerHTML = '';
+  if (canEdit()) {
+    const add = document.createElement('button'); add.className='ev-add-top'; add.textContent='＋ 일정 추가';
+    add.onclick = () => openEvt(null); box.appendChild(add);
+  }
+  const evs = state.events.slice().sort((a,b)=> (a.startDate+(a.startTime||'99')).localeCompare(b.startDate+(b.startTime||'99')));
+  if (!evs.length) { box.insertAdjacentHTML('beforeend','<div class="ev-empty">등록된 일정이 없어요.<br>＋ 일정 추가로 만들어 보세요.</div>'); return; }
+  const today = todayYmd();
+  const upcoming = evs.filter(e => (e.endDate||e.startDate) >= today);
+  const past = evs.filter(e => (e.endDate||e.startDate) < today);
+  if (upcoming.length) renderEvGroups(box, upcoming, today);
+  else box.insertAdjacentHTML('beforeend','<div class="ev-empty">다가오는 일정이 없어요.</div>');
+  if (past.length) {
+    const btn = document.createElement('button'); btn.className='ev-past-btn';
+    btn.textContent = evShowPast ? '▲ 지난 일정 '+past.length+'개 숨기기' : '▼ 지난 일정 '+past.length+'개 보기';
+    btn.onclick = () => { evShowPast = !evShowPast; renderEventList(); };
+    box.appendChild(btn);
+    if (evShowPast) renderEvGroups(box, past.slice().reverse(), today);
+  }
+}
+function renderEvGroups(box, list, today) {
+  let cur=null, group=null;
+  for (const ev of list) {
+    if (ev.startDate !== cur) {
+      cur = ev.startDate;
+      const d = new Date(ev.startDate+'T00:00');
+      const h = document.createElement('div');
+      h.className = 'ev-date-h' + (ev.startDate===today?' todayh':'');
+      h.innerHTML = (d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')<span class="ev-dday">'+ddayLabel(ev.startDate,today)+'</span>';
+      box.appendChild(h);
+      group = document.createElement('div'); group.className='ev-group'; box.appendChild(group);
+    }
+    group.appendChild(evRowEl(ev));
+  }
+}
+
+// ── 일정 모달 ──
+function openEvt(ev) {
+  if (ev === null && !canEdit()) { alert('편집 모드(🔓)에서만 추가할 수 있습니다.'); return; }
+  editingEvId = ev ? ev.id : null;
+  const ro = !canEdit();
+  document.getElementById('evModalTitle').textContent = ev ? (ro ? '일정 보기' : '일정 수정') : '일정 추가';
+  const def = calSel || todayYmd();
+  document.getElementById('evTitleIn').value = ev ? (ev.title||'') : '';
+  document.getElementById('evStartDate').value = ev ? ev.startDate : def;
+  document.getElementById('evStartTime').value = ev ? (ev.startTime||'') : '';
+  document.getElementById('evEndDate').value = ev ? (ev.endDate||ev.startDate) : def;
+  document.getElementById('evEndTime').value = ev ? (ev.endTime||'') : '';
+  document.getElementById('evMemoIn').value = ev ? (ev.memo||'') : '';
+  evMemberSel = ev ? (ev.memberId||null) : null;
+  renderEvMemberChips();
+  ['evTitleIn','evStartDate','evStartTime','evEndDate','evEndTime','evMemoIn'].forEach(id => document.getElementById(id).disabled = ro);
+  document.getElementById('evSaveBtn').classList.toggle('hidden', ro);
+  document.getElementById('evDeleteBtn').classList.toggle('hidden', !ev || ro);
+  document.getElementById('evModal').classList.remove('hidden');
+}
+function renderEvMemberChips() {
+  const box = document.getElementById('evMemberChips'); box.innerHTML='';
+  const ro = !canEdit();
+  const mk = (id,name,color) => {
+    const b = document.createElement('button'); b.className='ev-chip'; b.textContent=name;
+    if (evMemberSel===id) { b.style.background = color||'#e5e7eb'; b.style.borderColor = color||'#e5e7eb'; }
+    b.onclick = () => { if(ro) return; evMemberSel = (evMemberSel===id?null:id); renderEvMemberChips(); };
+    box.appendChild(b);
+  };
+  mk(null,'공용',null);
+  state.members.forEach(m => mk(m.id, m.name, m.color));
+}
+function saveEvt() {
+  if (!canEdit()) return;
+  const title = document.getElementById('evTitleIn').value.trim();
+  if (!title) { alert('제목을 입력하세요.'); return; }
+  let sd = document.getElementById('evStartDate').value || todayYmd();
+  let ed = document.getElementById('evEndDate').value || sd;
+  if (ed < sd) ed = sd;
+  const ts = nowIso();
+  const data = { title, startDate:sd, endDate:ed,
+    startTime:document.getElementById('evStartTime').value||'',
+    endTime:document.getElementById('evEndTime').value||'',
+    memberId:evMemberSel, memo:document.getElementById('evMemoIn').value.trim() };
+  const ev = editingEvId ? state.events.find(e=>e.id===editingEvId) : null;
+  if (ev) Object.assign(ev, data, { updated_at:ts });
+  else state.events.push(Object.assign({ id:evUid(), created_at:ts, updated_at:ts }, data));
+  calSel = sd;
+  document.getElementById('evModal').classList.add('hidden');
+  saveEvents(); render();
+}
+function deleteEvt() {
+  if (!canEdit() || !editingEvId) return;
+  if (!confirm('이 일정을 삭제할까요?')) return;
+  state.events = state.events.filter(e => e.id !== editingEvId);
+  document.getElementById('evModal').classList.add('hidden');
+  saveEvents(); render();
+}
+
+// ── 구성원 모달 ──
+function openMembers() {
+  if (!canEdit()) { alert('편집 모드(🔓)에서만 구성원을 관리할 수 있습니다.'); return; }
+  renderMembers(); document.getElementById('memModal').classList.remove('hidden');
+}
+function renderMembers() {
+  const box = document.getElementById('memList'); box.innerHTML='';
+  if (!state.members.length) box.innerHTML = '<div class="ev-empty" style="padding:14px">아직 구성원이 없어요. 아래에서 추가하세요.</div>';
+  state.members.forEach(m => {
+    const row = document.createElement('div'); row.className='mem-row2';
+    row.innerHTML = '<span class="mem-dot2" style="background:'+m.color+'"></span><span class="mn">'+escapeAttr(m.name)+'</span><button class="del">삭제</button>';
+    row.querySelector('.del').onclick = () => {
+      if (!confirm("'"+m.name+"' 삭제?")) return;
+      state.members = state.members.filter(x=>x.id!==m.id);
+      saveEvents(); renderMembers(); render();
+    };
+    box.appendChild(row);
+  });
+}
+function addMember() {
+  if (!canEdit()) return;
+  const name = document.getElementById('memNameIn').value.trim();
+  if (!name) return;
+  const color = document.getElementById('memColorIn').value || PALETTE[state.members.length%PALETTE.length];
+  state.members.push({ id:evUid(), name, color });
+  document.getElementById('memNameIn').value='';
+  saveEvents(); renderMembers(); renderEvMemberChips();
+}
+
 // ── 부트 ─────────────────────────────────────────
 async function bootstrap() {
   // 탭 클릭
@@ -620,12 +867,25 @@ async function bootstrap() {
   // 저장 FAB
   document.getElementById('btnSave').onclick = manualSave;
 
+  // 달력/목록(가족스케줄)
+  document.getElementById('calPrev').onclick = () => { calView.setMonth(calView.getMonth()-1); renderCal(); };
+  document.getElementById('calNext').onclick = () => { calView.setMonth(calView.getMonth()+1); renderCal(); };
+  document.getElementById('calToday').onclick = () => { const t=new Date(); calView=new Date(t.getFullYear(),t.getMonth(),1); calSel=todayYmd(); renderCal(); };
+  document.getElementById('calMembers').onclick = openMembers;
+  document.getElementById('evClose').onclick = () => document.getElementById('evModal').classList.add('hidden');
+  document.getElementById('evSaveBtn').onclick = saveEvt;
+  document.getElementById('evDeleteBtn').onclick = deleteEvt;
+  document.getElementById('memClose').onclick = () => document.getElementById('memModal').classList.add('hidden');
+  document.getElementById('memAddBtn').onclick = addMember;
+  document.querySelectorAll('.ev-overlay').forEach(ov => ov.addEventListener('click', e => { if (e.target===ov) ov.classList.add('hidden'); }));
+
   // 초기 데이터 로드
   state = await loadInitial();
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   updateEditUI();
-  renderMiniTabs();
-  render();
+  // 마지막 본 탭 복원(없으면 시간표)
+  const savedTab = localStorage.getItem('school-timetable-tab');
+  setActiveTab(['grid', 'detail', 'calendar', 'list'].includes(savedTab) ? savedTab : 'grid');
 }
 
 document.addEventListener('DOMContentLoaded', bootstrap);

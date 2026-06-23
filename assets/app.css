@@ -345,3 +345,95 @@ body.read-only .palette-swatch { pointer-events: none; }
   .row-card .f-place,
   .row-card .f-memo    { flex: 1 1 200px; }
 }
+
+/* ════════ 달력 / 목록 / 일정 모달 (가족스케줄 통합) ════════ */
+.cal-bar { display:flex; align-items:center; gap:4px; margin-bottom:8px; }
+.cal-nav { background:#fff; border:1px solid var(--border); border-radius:8px; width:34px; height:34px;
+  font-size:20px; color:var(--text); cursor:pointer; }
+.cal-title { font-size:1.05rem; font-weight:800; padding:0 6px; min-width:74px; text-align:center; }
+.cal-grow { flex:1; }
+.cal-mini { background:#fff; border:1px solid var(--border); border-radius:999px; padding:6px 11px;
+  font-size:.82rem; font-weight:600; color:var(--text); cursor:pointer; }
+.cal-week { display:grid; grid-template-columns:repeat(7,1fr); }
+.cal-week div { text-align:center; font-size:.72rem; color:var(--muted); padding:4px 0; font-weight:700; }
+.cal-week .sun { color:#ef4444; } .cal-week .sat { color:#3b82f6; }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--border);
+  border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.cal-cell { background:#fff; min-height:62px; padding:3px 3px 4px; display:flex; flex-direction:column; gap:2px;
+  overflow:hidden; cursor:pointer; }
+.cal-cell.oth { background:#faf7f9; }
+.cal-cell .cdn { font-size:.74rem; font-weight:700; color:var(--text); }
+.cal-cell.oth .cdn { color:#c4b5c0; }
+.cal-cell.sun .cdn { color:#ef4444; } .cal-cell.sat .cdn { color:#3b82f6; }
+.cal-cell.today .cdn { background:var(--primary); color:#fff; border-radius:50%; width:19px; height:19px;
+  display:inline-flex; align-items:center; justify-content:center; }
+.cal-cell.sel { outline:2px solid var(--primary); outline-offset:-2px; }
+.cal-chip { font-size:9.5px; line-height:1.25; border-radius:4px; padding:1px 3px; color:#1f2937;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; }
+.cal-more { font-size:9px; color:var(--muted); }
+
+.cal-day { margin-top:12px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; }
+.cal-day-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.cal-day-head strong { font-size:1rem; }
+.cal-day-head .cdg { flex:1; }
+.cal-day-add { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:6px 12px;
+  font-size:.82rem; font-weight:700; cursor:pointer; }
+
+/* 일정 행(목록·하루패널 공용) */
+.ev-row { display:flex; gap:10px; align-items:flex-start; background:#fff; border:1px solid var(--border);
+  border-radius:10px; padding:9px 10px; border-left:4px solid var(--primary); cursor:pointer; }
+.ev-row .ev-time { font-size:.72rem; color:var(--muted); min-width:74px; font-variant-numeric:tabular-nums; padding-top:1px; }
+.ev-row .ev-body { flex:1; min-width:0; }
+.ev-row .ev-name { font-weight:700; font-size:.95rem; line-height:1.3; }
+/* 메모: 제목 아래, 조금 밝은 음영 글자 + 작은 폰트 (요구사항 5) */
+.ev-row .ev-memo { font-size:.78rem; color:#9aa1ac; margin-top:1px; line-height:1.3;
+  white-space:pre-wrap; word-break:break-word; }
+.ev-row .ev-who { font-size:.68rem; font-weight:800; border-radius:999px; padding:1px 8px; color:#1f2937; white-space:nowrap; }
+
+/* 목록 뷰 */
+.ev-listview { display:flex; flex-direction:column; }
+.ev-add-top { background:var(--primary); color:#fff; border:none; border-radius:10px; padding:11px;
+  font-size:.95rem; font-weight:700; cursor:pointer; margin-bottom:8px; }
+.ev-date-h { position:sticky; top:104px; background:var(--bg); color:var(--muted); font-size:.78rem;
+  font-weight:800; padding:9px 2px 5px; z-index:1; }
+.ev-date-h.todayh { color:var(--primary); }
+.ev-dday { font-size:.7rem; color:var(--muted); font-weight:700; margin-left:6px; }
+.ev-group { display:flex; flex-direction:column; gap:7px; margin-bottom:4px; }
+.ev-empty { color:var(--muted); text-align:center; padding:40px 16px; }
+.ev-past-btn { width:100%; background:#fff; border:1px solid var(--border); color:var(--muted);
+  border-radius:10px; padding:10px; font-size:.85rem; font-weight:700; cursor:pointer; margin:8px 0; }
+
+/* 모달 */
+.ev-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:flex-end;
+  justify-content:center; z-index:60; }
+@media(min-width:560px){ .ev-overlay{ align-items:center; } }
+.ev-overlay.hidden { display:none; }
+.ev-sheet { background:#fff; width:min(520px,100%); border-radius:16px 16px 0 0; max-height:90vh;
+  display:flex; flex-direction:column; }
+@media(min-width:560px){ .ev-sheet{ border-radius:16px; } }
+.ev-sheet-head { display:flex; align-items:center; justify-content:space-between; padding:14px;
+  border-bottom:1px solid var(--border); font-weight:800; }
+.ev-x { background:transparent; border:none; font-size:22px; color:var(--muted); cursor:pointer; }
+.ev-sheet-body { padding:14px; overflow:auto; display:flex; flex-direction:column; gap:6px;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom)); }
+.ev-sheet-body label { font-size:.8rem; color:var(--muted); margin-top:6px; }
+.ev-sheet-body input, .ev-sheet-body textarea { width:100%; border:1px solid var(--border); border-radius:9px;
+  padding:10px; color:var(--text); background:#fff; }
+.ev-sheet-body input[type=color] { padding:3px; height:44px; }
+.ev-row2 { display:flex; gap:10px; } .ev-row2>div { flex:1; }
+.ev-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.ev-chip { border:1px solid var(--border); border-radius:999px; padding:6px 12px; font-size:.85rem;
+  font-weight:700; background:#fff; color:var(--text); cursor:pointer; }
+.ev-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+.ev-btn { border:1px solid var(--border); background:#fff; border-radius:10px; padding:10px 16px;
+  font-size:.9rem; font-weight:700; cursor:pointer; }
+.ev-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.ev-btn.danger { color:var(--danger); border-color:#f3c4c4; }
+.mem-list2 { display:flex; flex-direction:column; gap:6px; margin-bottom:4px; }
+.mem-row2 { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--border);
+  border-radius:10px; padding:8px 10px; }
+.mem-dot2 { width:18px; height:18px; border-radius:50%; flex:0 0 auto; }
+.mem-row2 .mn { flex:1; font-weight:700; }
+.mem-row2 .del { color:var(--danger); background:transparent; border:none; font-size:.85rem; cursor:pointer; }
+/* 읽기전용: 추가 버튼 숨김 */
+body.read-only .cal-day-add, body.read-only .ev-add-top, body.read-only #calMembers { display:none !important; }

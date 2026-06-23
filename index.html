@@ -29,7 +29,9 @@
 
 <nav class="top-tabs" role="tablist" aria-label="상위 탭">
   <button class="top-tab active" role="tab" data-tab="grid" aria-selected="true">시간표</button>
-  <button class="top-tab" role="tab" data-tab="detail" aria-selected="false">상세</button>
+  <button class="top-tab" role="tab" data-tab="detail" aria-selected="false">시간표상세</button>
+  <button class="top-tab" role="tab" data-tab="calendar" aria-selected="false">달력</button>
+  <button class="top-tab" role="tab" data-tab="list" aria-selected="false">목록</button>
 </nav>
 
 <nav class="mini-tabs" id="miniTabs" role="tablist" aria-label="아이">
@@ -47,7 +49,70 @@
   <section class="tab-panel" id="tabGrid" data-tab="grid">
     <div class="grid-wrap" id="gridWrap"></div>
   </section>
+
+  <!-- 달력 탭 -->
+  <section class="tab-panel hidden" id="tabCalendar" data-tab="calendar">
+    <div class="cal-bar">
+      <button class="cal-nav" id="calPrev" aria-label="이전 달">‹</button>
+      <strong class="cal-title" id="calTitle">·</strong>
+      <button class="cal-nav" id="calNext" aria-label="다음 달">›</button>
+      <span class="cal-grow"></span>
+      <button class="cal-mini" id="calToday">오늘</button>
+      <button class="cal-mini" id="calMembers">👥 구성원</button>
+    </div>
+    <div class="cal-week" id="calWeek"></div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-day hidden" id="calDay"></div>
+  </section>
+
+  <!-- 목록 탭 -->
+  <section class="tab-panel hidden" id="tabList" data-tab="list">
+    <div id="listView" class="ev-listview"></div>
+  </section>
 </main>
+
+<!-- 일정 추가/수정 -->
+<div id="evModal" class="ev-overlay hidden">
+  <div class="ev-sheet">
+    <div class="ev-sheet-head"><span id="evModalTitle">일정 추가</span><button class="ev-x" id="evClose">×</button></div>
+    <div class="ev-sheet-body">
+      <label>제목</label>
+      <input id="evTitleIn" type="text" placeholder="예: 가족 저녁식사" />
+      <div class="ev-row2">
+        <div><label>시작일</label><input id="evStartDate" type="date" /></div>
+        <div><label>시작시간 <small>(선택)</small></label><input id="evStartTime" type="time" /></div>
+      </div>
+      <div class="ev-row2">
+        <div><label>종료일</label><input id="evEndDate" type="date" /></div>
+        <div><label>종료시간 <small>(선택)</small></label><input id="evEndTime" type="time" /></div>
+      </div>
+      <label>담당 가족</label>
+      <div id="evMemberChips" class="ev-chips"></div>
+      <label>메모 <small>(선택)</small></label>
+      <textarea id="evMemoIn" rows="2" placeholder="장소·준비물 등"></textarea>
+      <div class="ev-actions">
+        <button id="evDeleteBtn" class="ev-btn danger hidden">삭제</button>
+        <button id="evSaveBtn" class="ev-btn primary">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 가족 구성원 -->
+<div id="memModal" class="ev-overlay hidden">
+  <div class="ev-sheet">
+    <div class="ev-sheet-head"><span>가족 구성원</span><button class="ev-x" id="memClose">×</button></div>
+    <div class="ev-sheet-body">
+      <div id="memList" class="mem-list2"></div>
+      <label>새 구성원</label>
+      <div class="ev-row2">
+        <input id="memNameIn" type="text" placeholder="이름 (예: 엄마)" />
+        <input id="memColorIn" type="color" value="#fca5a5" />
+      </div>
+      <div class="ev-actions"><button id="memAddBtn" class="ev-btn primary">추가</button></div>
+    </div>
+  </div>
+</div>
 
 <script src="assets/app.js"></script>
 <script>
