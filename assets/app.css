@@ -57,15 +57,21 @@ input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
   border-bottom: 1px solid var(--border);
 }
 .top-tab {
-  flex: 1; padding: 12px;
+  flex: 1; padding: 8px 2px;
   background: transparent; border: none;
-  font-size: .95rem; font-weight: 600; color: var(--muted);
-  cursor: pointer;
+  font-size: .75rem; font-weight: 600; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
   border-bottom: 3px solid transparent;
 }
-.top-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+/* 그룹별 색상: 시간표·시간표상세=파랑 / 달력·목록=노랑 */
+.top-tab[data-tab="grid"], .top-tab[data-tab="detail"] { color: #2563eb; }
+.top-tab[data-tab="calendar"], .top-tab[data-tab="list"] { color: #d97706; }
+.top-tab:not(.active) { opacity: .5; }
+.top-tab.active[data-tab="grid"], .top-tab.active[data-tab="detail"] {
+  border-bottom-color: #2563eb;
+}
+.top-tab.active[data-tab="calendar"], .top-tab.active[data-tab="list"] {
+  border-bottom-color: #f59e0b;
 }
 
 /* ── 미니 탭 (승호/승아/승승) ── */
