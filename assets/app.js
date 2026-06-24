@@ -844,7 +844,7 @@ function renderCalGrid() {
   const y = calView.getFullYear(), m = calView.getMonth();
   const start = new Date(y, m, 1); start.setDate(1 - start.getDay());
   const today = todayYmd();
-  const LANES = 3, LANE_H = 15;
+  const LANES = 3, LANE_H = 17;
   const gridEnd = new Date(start); gridEnd.setDate(start.getDate()+41);
   const instances = expandInstances(ymdLocal(start), ymdLocal(gridEnd));   // 매년반복 펼침 포함
 
@@ -855,7 +855,7 @@ function renderCalGrid() {
     const wStart = dsList[0], wEnd = dsList[6];
     const holiNames = dsList.map(holidayName);
     const weekHasHoli = holiNames.some(Boolean);
-    const headH = 18 + (weekHasHoli ? 12 : 0);   // 공휴일명 줄 있으면 헤더 높이 추가
+    const headH = 20 + (weekHasHoli ? 18 : 0);   // 공휴일명 줄 있으면 막대 시작을 더 내려 글자 겹침 방지
 
     // 인스턴스 → 세그먼트(막대 조각). 기간표시(span)면 시작~종료 1조각, 아니면 시작/종료 각각.
     const segs = [];
@@ -885,7 +885,7 @@ function renderCalGrid() {
     const usedLanes = Math.min(LANES, laneEnd.length);
 
     const wrow = document.createElement('div'); wrow.className = 'cal-wrow';
-    wrow.style.minHeight = Math.max(58, headH + usedLanes*LANE_H + 6) + 'px';
+    wrow.style.minHeight = Math.max(64, headH + usedLanes*LANE_H + 6) + 'px';
 
     // 날짜 칸: 날짜숫자 + 음력 + 공휴일명
     days.forEach((d, i) => {
