@@ -66,6 +66,8 @@ input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
 /* 그룹별 색상: 시간표·시간표상세=파랑 / 달력·목록=노랑 */
 .top-tab[data-tab="grid"], .top-tab[data-tab="detail"] { color: #2563eb; }
 .top-tab[data-tab="calendar"], .top-tab[data-tab="list"] { color: #d97706; }
+.top-tab[data-tab="memo"] { color: #059669; }
+.top-tab.active[data-tab="memo"] { border-bottom-color: #10b981; }
 .top-tab:not(.active) { opacity: .5; }
 .top-tab.active[data-tab="grid"], .top-tab.active[data-tab="detail"] {
   border-bottom-color: #2563eb;
@@ -374,9 +376,14 @@ body.read-only .palette-swatch { pointer-events: none; }
 .cal-cell .cdn { font-size:.74rem; font-weight:700; color:var(--text); }
 .cal-cell.oth .cdn { color:#c4b5c0; }
 .cal-cell.sun .cdn { color:#ef4444; } .cal-cell.sat .cdn { color:#3b82f6; }
+.cal-cell.holi .cdn { color:#ef4444; }
 .cal-cell.today .cdn { background:var(--primary); color:#fff; border-radius:50%; width:19px; height:19px;
   display:inline-flex; align-items:center; justify-content:center; }
 .cal-cell.sel { outline:2px solid var(--primary); outline-offset:-2px; z-index:3; }
+.cdn-lunar { font-size:8px; color:#b0a8b4; margin-left:2px; vertical-align:middle; }
+.cal-cell.oth .cdn-lunar { color:#d4cdd6; }
+.cal-holi { display:block; font-size:8.5px; line-height:1.15; color:#ef4444; font-weight:700;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* 연속 일정 막대(주 단위로 가로로 이어짐) */
 .cal-bars { position:absolute; left:0; right:0; bottom:0; pointer-events:none; }
 .cal-bar2 { position:absolute; height:13px; line-height:13px; box-sizing:border-box;
@@ -455,4 +462,37 @@ body.read-only .palette-swatch { pointer-events: none; }
 .mem-row2 .mn { flex:1; font-weight:700; }
 .mem-row2 .del { color:var(--danger); background:transparent; border:none; font-size:.85rem; cursor:pointer; }
 /* 읽기전용: 추가 버튼 숨김 */
-body.read-only .cal-day-add, body.read-only .ev-add-top, body.read-only #calMembers { display:none !important; }
+body.read-only .cal-day-add, body.read-only .ev-add-top, body.read-only #calMembers,
+body.read-only .memo-del { display:none !important; }
+
+/* ── 음력/공휴일 상세 헤더 ── */
+.cdh-lunar { font-size:.72rem; color:#9aa1ac; font-weight:600; }
+.cdh-holi  { font-size:.74rem; color:#ef4444; font-weight:700; }
+
+/* ── 목록: 이모지·매년·오늘 분리선·공휴일 ── */
+.ev-emo { margin-right:3px; }
+.ev-yearly { font-size:.7rem; color:#0891b2; font-weight:700; }
+.ev-today-sep { text-align:center; color:#ef4444; font-weight:800; font-size:.8rem;
+  margin:10px 0 6px; letter-spacing:.5px; }
+.ev-date-h.holih, .ev-holi { color:#ef4444; }
+.ev-holi { font-size:.72rem; font-weight:700; margin-left:6px; }
+
+/* ── 일정모달 체크박스 ── */
+.ev-checks { display:flex; flex-wrap:wrap; gap:14px; margin:4px 0 2px; }
+.ev-check { display:flex; align-items:center; gap:6px; font-weight:600; font-size:.9rem; cursor:pointer; }
+.ev-check input { width:17px; height:17px; }
+
+/* ── 분류 모달: 이모지 ── */
+.mem-emo2 { width:20px; text-align:center; font-size:1rem; flex:0 0 auto; }
+.mem-add-row { display:flex; gap:8px; align-items:center; }
+.mem-add-row input[type="text"]#memNameIn { flex:1; }
+.mem-emoji-in { width:44px; text-align:center; flex:0 0 auto; }
+
+/* ── 메모 보드 ── */
+.memo-view { display:flex; flex-direction:column; gap:10px; padding:4px 0 24px; }
+.memo-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; }
+.memo-text { width:100%; border:none; resize:vertical; font:inherit; font-size:.95rem;
+  line-height:1.45; color:var(--text); background:transparent; outline:none; }
+.memo-bar { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.memo-time { flex:1; font-size:.72rem; color:var(--muted); }
+.memo-del { color:var(--danger); background:transparent; border:none; font-size:.82rem; cursor:pointer; }

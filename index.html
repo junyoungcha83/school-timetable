@@ -32,6 +32,7 @@
   <button class="top-tab" role="tab" data-tab="detail" aria-selected="false">시간표상세</button>
   <button class="top-tab" role="tab" data-tab="calendar" aria-selected="false">달력</button>
   <button class="top-tab" role="tab" data-tab="list" aria-selected="false">목록</button>
+  <button class="top-tab" role="tab" data-tab="memo" aria-selected="false">메모</button>
 </nav>
 
 <nav class="mini-tabs" id="miniTabs" role="tablist" aria-label="아이">
@@ -58,7 +59,7 @@
       <button class="cal-nav" id="calNext" aria-label="다음 달">›</button>
       <span class="cal-grow"></span>
       <button class="cal-mini" id="calToday">오늘</button>
-      <button class="cal-mini" id="calMembers">👥 구성원</button>
+      <button class="cal-mini" id="calMembers">🏷 분류</button>
     </div>
     <div class="cal-week" id="calWeek"></div>
     <div class="cal-grid" id="calGrid"></div>
@@ -68,6 +69,11 @@
   <!-- 목록 탭 -->
   <section class="tab-panel hidden" id="tabList" data-tab="list">
     <div id="listView" class="ev-listview"></div>
+  </section>
+
+  <!-- 메모 탭 -->
+  <section class="tab-panel hidden" id="tabMemo" data-tab="memo">
+    <div id="memoView" class="memo-view"></div>
   </section>
 </main>
 
@@ -86,7 +92,11 @@
         <div><label>종료일</label><input id="evEndDate" type="date" /></div>
         <div><label>종료시간 <small>(선택)</small></label><input id="evEndTime" type="time" /></div>
       </div>
-      <label>담당 가족 <small>· 색상</small></label>
+      <div class="ev-checks">
+        <label class="ev-check"><input id="evYearlyIn" type="checkbox" /> 매년 반복</label>
+        <label class="ev-check"><input id="evSpanIn" type="checkbox" /> 기간으로 표시 <small>(시작~종료 연결)</small></label>
+      </div>
+      <label>분류 <small>· 색상</small></label>
       <div class="ev-member-row">
         <div id="evMemberChips" class="ev-chips"></div>
         <input id="evColorIn" type="color" class="ev-color-in" value="#fca5a5" title="일정 색상" />
@@ -101,15 +111,16 @@
   </div>
 </div>
 
-<!-- 가족 구성원 -->
+<!-- 분류 관리 -->
 <div id="memModal" class="ev-overlay hidden">
   <div class="ev-sheet">
-    <div class="ev-sheet-head"><span>가족 구성원</span><button class="ev-x" id="memClose">×</button></div>
+    <div class="ev-sheet-head"><span>분류 관리</span><button class="ev-x" id="memClose">×</button></div>
     <div class="ev-sheet-body">
       <div id="memList" class="mem-list2"></div>
-      <label>새 구성원</label>
-      <div class="ev-row2">
-        <input id="memNameIn" type="text" placeholder="이름 (예: 엄마)" />
+      <label>새 분류</label>
+      <div class="mem-add-row">
+        <input id="memEmojiIn" type="text" class="mem-emoji-in" maxlength="2" placeholder="🏷" />
+        <input id="memNameIn" type="text" placeholder="분류명 (예: 가족, 학교)" />
         <input id="memColorIn" type="color" value="#fca5a5" />
       </div>
       <div class="ev-actions"><button id="memAddBtn" class="ev-btn primary">추가</button></div>
