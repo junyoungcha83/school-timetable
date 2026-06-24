@@ -148,6 +148,7 @@ let activeChild = 'seungho';     // 'seungho' | 'seunga' | 'seungseung' (grid �
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 let calView = (() => { const d = new Date(); d.setDate(1); return d; })();
 let calSel = null;               // 선택한 날짜 'YYYY-MM-DD'
+let selEvtId = null;             // 달력에서 클릭으로 선택된 일정 id(하루패널의 '일정 수정' 대상)
 let evShowPast = false;          // 목록: 지난 일정 펼침
 let editingEvId = null;
 let evMemberSel = null;          // 일정 모달에서 선택된 담당자 id
@@ -844,7 +845,7 @@ function renderCalGrid() {
   const y = calView.getFullYear(), m = calView.getMonth();
   const start = new Date(y, m, 1); start.setDate(1 - start.getDay());
   const today = todayYmd();
-  const LANES = 3, LANE_H = 17;
+  const LANES = 3, LANE_H = 19;
   const gridEnd = new Date(start); gridEnd.setDate(start.getDate()+41);
   const instances = expandInstances(ymdLocal(start), ymdLocal(gridEnd));   // 매년반복 펼침 포함
 
@@ -885,7 +886,7 @@ function renderCalGrid() {
     const usedLanes = Math.min(LANES, laneEnd.length);
 
     const wrow = document.createElement('div'); wrow.className = 'cal-wrow';
-    wrow.style.minHeight = Math.max(64, headH + usedLanes*LANE_H + 6) + 'px';
+    wrow.style.minHeight = Math.max(74, headH + usedLanes*LANE_H + 6) + 'px';
 
     // 날짜 칸: 날짜숫자 + 음력 + 공휴일명
     days.forEach((d, i) => {
@@ -898,7 +899,7 @@ function renderCalGrid() {
       cell.innerHTML = '<span class="cdn">'+d.getDate()+'</span>'
         + (luTxt ? '<span class="cdn-lunar">'+luTxt+'</span>' : '')
         + (holi ? '<span class="cal-holi">'+escapeAttr(holi)+'</span>' : '');
-      cell.onclick = () => { calSel = ds; renderCal(); };
+      cell.onclick = () => { calSel = ds; selEvtId = null; renderCal(); };
       wrow.appendChild(cell);
     });
 
@@ -916,7 +917,14 @@ function renderCalGrid() {
       const single = it.span === 1 && !it.contL && !it.contR;
       const prefix = (single && it.ev.startTime && !it.ev.span) ? it.ev.startTime+' ' : '';
       bar.textContent = (evEmoji(it.ev) || '') + prefix + (it.ev.title || '');
-      bar.onclick = (e) => { e.stopPropagation(); openEvt(it.ev); };
+      bar.onclick = (e) => {
+        e.stopPropagation();
+        const rect = bars.getBoundingClientRect();
+        let col = Math.floor((e.clientX - rect.left) / rect.width * 7);
+        col = Math.max(it.sCol, Math.min(it.eCol, col));   // 클릭 지점을 막대 범위 내 날짜로
+        calSel = dsList[col]; selEvtId = it.ev.id;          // 그 날짜 패널 + 해당 일정 선택
+        renderCal();
+      };
       bars.appendChild(bar);
     }
     moreCount.forEach((n, i) => {
@@ -936,9 +944,20 @@ function renderCalDay() {
   if (!calSel) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden'); panel.innerHTML = '';
   const d = new Date(calSel+'T00:00');
-  // 일정추가 버튼 — 패널 우상단, 프레임 위로 살짝 띄움(달력과 겹치지 않게)
+  const evs = eventsOnDate(calSel);
+  // 수정 대상 = 선택된 일정(없으면 첫 일정)
+  const selEv = evs.find(e => e.id === selEvtId) || evs[0] || null;
+
+  // 우상단 액션: ＋일정추가 (위) / ✎일정수정 (아래) — 프레임 위로 살짝 띄움
+  const actions = document.createElement('div'); actions.className = 'cal-day-actions';
   const add = document.createElement('button'); add.className='cal-day-add'; add.textContent='＋ 일정 추가';
-  add.onclick = () => openEvt(null); panel.appendChild(add);
+  add.onclick = () => openEvt(null); actions.appendChild(add);
+  if (selEv && canEdit()) {
+    const edit = document.createElement('button'); edit.className='cal-day-edit'; edit.textContent='✎ 일정 수정';
+    edit.onclick = () => openEvt(selEv); actions.appendChild(edit);
+  }
+  panel.appendChild(actions);
+
   // 날짜 + 음력 + 공휴일
   const lu = solarToLunar(d.getFullYear(), d.getMonth()+1, d.getDate());
   const luTxt = lu ? ' <span class="cdh-lunar">음 '+(lu.leap?'윤':'')+lu.lm+'.'+lu.ld+'</span>' : '';
@@ -947,17 +966,17 @@ function renderCalDay() {
   const head = document.createElement('div'); head.className = 'cal-day-head';
   head.innerHTML = '<strong>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')</strong>'+luTxt+holiTxt;
   panel.appendChild(head);
-  // 내용 — 간단히(점·시간·이모지·제목)
-  const evs = eventsOnDate(calSel);
+
   if (!evs.length) { const e=document.createElement('div'); e.className='ev-empty'; e.textContent='이 날 일정이 없어요.'; panel.appendChild(e); return; }
+  // 내용 — 간단히(점·시간·이모지·제목). 클릭 = 그 일정 선택(수정 대상 지정), 수정은 ✎ 버튼.
   const wrap = document.createElement('div'); wrap.className='cal-day-list';
   evs.forEach(ev => {
     const t = (ev.startTime && (!ev.endDate || ev.endDate === ev.startDate)) ? ev.startTime : '';
-    const row = document.createElement('div'); row.className='cdl-row';
+    const row = document.createElement('div'); row.className='cdl-row' + (selEv && ev.id===selEv.id ? ' sel' : '');
     row.innerHTML = '<span class="cdl-dot" style="background:'+evColor(ev)+'"></span>'
       + (t ? '<span class="cdl-t">'+escapeAttr(t)+'</span>' : '')
       + '<span class="cdl-nm">'+(evEmoji(ev)?escapeAttr(evEmoji(ev))+' ':'')+escapeAttr(ev.title||'(제목 없음)')+'</span>';
-    row.onclick = () => openEvt(ev);
+    row.onclick = () => { selEvtId = ev.id; renderCalDay(); };
     wrap.appendChild(row);
   });
   panel.appendChild(wrap);
