@@ -78,6 +78,22 @@ function solarToLunar(sy, sm, sd) {
   if (offset < 0) { offset += temp; --i; }
   return { lm: i, ld: offset + 1, leap: isLeap };
 }
+// 음력 → 양력 'YYYY-MM-DD' (isLeap=윤달 여부)
+function lunarToSolar(y, m, d, isLeap) {
+  if (y < 1901 || y > 2099) return null;
+  let offset = 0;
+  for (let i = 1900; i < y; i++) offset += lYearDays(i);
+  const leap = lLeapMonth(y);
+  for (let i = 1; i < m; i++) offset += lMonthDays(y, i);
+  if (leap > 0) {
+    if (m > leap) offset += lLeapDays(y);                       // 윤달이 m월보다 앞 → 합산
+    else if (m === leap && isLeap) offset += lMonthDays(y, m);  // 목표가 윤m월 → 평m월 먼저 합산
+  }
+  offset += (d - 1);
+  const dt = new Date(Date.UTC(1900, 0, 31) + offset * 86400000);
+  const p = n => String(n).padStart(2, '0');
+  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())}`;
+}
 
 // ── 한국 공휴일 (양력 고정 + 음력 + 대체공휴일, 연도별 계산·캐시) ──
 const _holiCache = {};
@@ -920,18 +936,30 @@ function renderCalDay() {
   if (!calSel) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden'); panel.innerHTML = '';
   const d = new Date(calSel+'T00:00');
-  const head = document.createElement('div'); head.className = 'cal-day-head';
+  // 일정추가 버튼 — 패널 우상단, 프레임 위로 살짝 띄움(달력과 겹치지 않게)
+  const add = document.createElement('button'); add.className='cal-day-add'; add.textContent='＋ 일정 추가';
+  add.onclick = () => openEvt(null); panel.appendChild(add);
+  // 날짜 + 음력 + 공휴일
   const lu = solarToLunar(d.getFullYear(), d.getMonth()+1, d.getDate());
   const luTxt = lu ? ' <span class="cdh-lunar">음 '+(lu.leap?'윤':'')+lu.lm+'.'+lu.ld+'</span>' : '';
   const holi = holidayName(calSel);
   const holiTxt = holi ? ' <span class="cdh-holi">'+escapeAttr(holi)+'</span>' : '';
-  head.innerHTML = '<strong>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')</strong>'+luTxt+holiTxt+'<span class="cdg"></span>';
-  const add = document.createElement('button'); add.className='cal-day-add'; add.textContent='＋ 일정 추가';
-  add.onclick = () => openEvt(null); head.appendChild(add); panel.appendChild(head);
+  const head = document.createElement('div'); head.className = 'cal-day-head';
+  head.innerHTML = '<strong>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+WD[d.getDay()]+')</strong>'+luTxt+holiTxt;
+  panel.appendChild(head);
+  // 내용 — 간단히(점·시간·이모지·제목)
   const evs = eventsOnDate(calSel);
   if (!evs.length) { const e=document.createElement('div'); e.className='ev-empty'; e.textContent='이 날 일정이 없어요.'; panel.appendChild(e); return; }
-  const wrap = document.createElement('div'); wrap.className='ev-group';
-  evs.forEach(ev => wrap.appendChild(evRowEl(ev)));
+  const wrap = document.createElement('div'); wrap.className='cal-day-list';
+  evs.forEach(ev => {
+    const t = (ev.startTime && (!ev.endDate || ev.endDate === ev.startDate)) ? ev.startTime : '';
+    const row = document.createElement('div'); row.className='cdl-row';
+    row.innerHTML = '<span class="cdl-dot" style="background:'+evColor(ev)+'"></span>'
+      + (t ? '<span class="cdl-t">'+escapeAttr(t)+'</span>' : '')
+      + '<span class="cdl-nm">'+(evEmoji(ev)?escapeAttr(evEmoji(ev))+' ':'')+escapeAttr(ev.title||'(제목 없음)')+'</span>';
+    row.onclick = () => openEvt(ev);
+    wrap.appendChild(row);
+  });
   panel.appendChild(wrap);
 }
 
@@ -1017,6 +1045,7 @@ function openEvt(ev) {
   document.getElementById('evEndDate').value = ev ? (ev.endDate||ev.startDate) : def;
   document.getElementById('evEndTime').value = ev ? (ev.endTime||'') : '';
   document.getElementById('evMemoIn').value = ev ? (ev.memo||'') : '';
+  document.getElementById('evLunarBox').classList.add('hidden');   // 음력 선택칸은 닫은 채로 시작
   document.getElementById('evYearlyIn').checked = ev ? !!ev.yearly : false;
   document.getElementById('evSpanIn').checked = ev ? !!ev.span : false;
   evMemberSel = ev ? (ev.memberId||null) : null;
@@ -1173,6 +1202,34 @@ async function bootstrap() {
     const s = document.getElementById('evStartDate').value, e = document.getElementById('evEndDate');
     if (s && (!e.value || e.value < s)) e.value = s;
   });
+  // 음력 날짜 선택 — 토글 시 현재 시작일의 음력으로 프리필, 적용 시 양력으로 변환해 시작일 채움
+  document.getElementById('evLunarBtn').onclick = () => {
+    const box = document.getElementById('evLunarBox');
+    const opening = box.classList.contains('hidden');
+    box.classList.toggle('hidden');
+    if (opening) {
+      const sd = document.getElementById('evStartDate').value || todayYmd();
+      const d = new Date(sd + 'T00:00'), lu = solarToLunar(d.getFullYear(), d.getMonth()+1, d.getDate());
+      if (lu) {
+        document.getElementById('evLunY').value = d.getFullYear();
+        document.getElementById('evLunM').value = lu.lm;
+        document.getElementById('evLunD').value = lu.ld;
+        document.getElementById('evLunLeap').checked = lu.leap;
+      }
+    }
+  };
+  document.getElementById('evLunApply').onclick = () => {
+    const y = parseInt(document.getElementById('evLunY').value, 10);
+    const m = parseInt(document.getElementById('evLunM').value, 10);
+    const dd = parseInt(document.getElementById('evLunD').value, 10);
+    const leap = document.getElementById('evLunLeap').checked;
+    if (!y || !m || !dd) { alert('음력 년·월·일을 입력하세요.'); return; }
+    const sol = lunarToSolar(y, m, dd, leap);
+    if (!sol) { alert('변환할 수 없는 음력 날짜입니다(1901~2099).'); return; }
+    const sd = document.getElementById('evStartDate');
+    sd.value = sol; sd.dispatchEvent(new Event('input'));   // 종료일 자동맞춤 트리거
+    document.getElementById('evLunarBox').classList.add('hidden');
+  };
   document.querySelectorAll('.ev-overlay').forEach(ov => ov.addEventListener('click', e => { if (e.target===ov) ov.classList.add('hidden'); }));
 
   // 초기 데이터 로드

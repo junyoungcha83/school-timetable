@@ -85,8 +85,16 @@
       <label>제목</label>
       <input id="evTitleIn" type="text" placeholder="예: 가족 저녁식사" />
       <div class="ev-row2">
-        <div><label>시작일</label><input id="evStartDate" type="date" /></div>
+        <div><label>시작일 <button type="button" id="evLunarBtn" class="lunar-mini">🌙 음력</button></label><input id="evStartDate" type="date" /></div>
         <div><label>시작시간 <small>(선택)</small></label><input id="evStartTime" type="time" /></div>
+      </div>
+      <div id="evLunarBox" class="ev-lunar hidden">
+        <span>음력</span>
+        <input id="evLunY" type="number" class="lun-in lun-y" inputmode="numeric" placeholder="년" />
+        <input id="evLunM" type="number" class="lun-in" min="1" max="12" inputmode="numeric" placeholder="월" />
+        <input id="evLunD" type="number" class="lun-in" min="1" max="30" inputmode="numeric" placeholder="일" />
+        <label class="lun-leap"><input id="evLunLeap" type="checkbox" /> 윤달</label>
+        <button type="button" id="evLunApply" class="ev-btn sm primary">적용</button>
       </div>
       <div class="ev-row2">
         <div><label>종료일</label><input id="evEndDate" type="date" /></div>
