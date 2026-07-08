@@ -495,6 +495,7 @@ body.read-only .memo-del { display:none !important; }
 /* ── 목록: 이모지·매년·오늘 분리선·공휴일 ── */
 .ev-emo { margin-right:3px; }
 .ev-yearly { font-size:.7rem; color:#0891b2; font-weight:700; }
+.ev-lunar-tag { font-size:.7rem; color:#7c3aed; font-weight:700; }
 .ev-today-sep { text-align:center; color:#ef4444; font-weight:800; font-size:.8rem;
   margin:10px 0 6px; letter-spacing:.5px; }
 .ev-date-h.holih, .ev-holi { color:#ef4444; }

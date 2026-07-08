@@ -151,6 +151,7 @@ let calSel = null;               // 선택한 날짜 'YYYY-MM-DD'
 let selEvtId = null;             // 달력에서 클릭으로 선택된 일정 id(하루패널의 '일정 수정' 대상)
 let evShowPast = false;          // 목록: 지난 일정 펼침
 let editingEvId = null;
+let evLunarSel = null;   // 현재 편집 중 이벤트의 음력 기준 {m,d,leap} — 매년반복 시 연도별 음→양 변환용
 let evMemberSel = null;          // 일정 모달에서 선택된 담당자 id
 
 // ── 유틸 ─────────────────────────────────────────
@@ -321,6 +322,8 @@ function migrate(loaded) {
     ev.memo = typeof ev.memo === 'string' ? ev.memo : '';
     ev.yearly = ev.yearly === true;     // 매년 반복
     ev.span = ev.span === true;         // 기간으로 연결 표시(언체크면 시작·종료 각각만)
+    ev.lunar = (ev.lunar && typeof ev.lunar === 'object' && ev.lunar.m && ev.lunar.d)
+      ? { m:+ev.lunar.m, d:+ev.lunar.d, leap:!!ev.lunar.leap } : null;   // 음력 기준(매년반복 시 연도별 변환)
     ev.created_at = ev.created_at || nowIso();
     ev.updated_at = ev.updated_at || ev.created_at;
   }
@@ -798,6 +801,7 @@ function evRowEl(ev) {
   row.className = 'ev-row'; row.style.borderLeftColor = c;
   const nameHtml = (emo ? '<span class="ev-emo">' + escapeAttr(emo) + '</span>' : '')
     + escapeAttr(ev.title || '(제목 없음)')
+    + (ev.lunar ? ' <span class="ev-lunar-tag">🌙음 ' + ev.lunar.m + '.' + ev.lunar.d + (ev.lunar.leap?'(윤)':'') + '</span>' : '')
     + (ev.yearly ? ' <span class="ev-yearly">🔁매년</span>' : '');
   row.innerHTML =
     '<span class="ev-time">' + escapeAttr(evTimeText(ev)) + '</span>' +
@@ -809,6 +813,7 @@ function evRowEl(ev) {
 }
 // 'YYYY-MM-DD' 의 연도만 deltaY 만큼 이동
 function shiftDateYear(ds, deltaY) { return (+ds.slice(0,4) + deltaY) + ds.slice(4); }
+function addDaysYmd(ds, n) { const d = new Date(ds+'T00:00'); d.setDate(d.getDate()+n); return ymdLocal(d); }
 // 주어진 날짜범위와 겹치는 일정 인스턴스 [{ev, sd, ed}] — 매년반복은 해당 연도로 펼침
 function expandInstances(rangeStart, rangeEnd) {
   const y0 = +rangeStart.slice(0,4), y1 = +rangeEnd.slice(0,4), out = [];
@@ -816,9 +821,18 @@ function expandInstances(rangeStart, rangeEnd) {
     if (!ev.startDate) continue;
     const ed0 = ev.endDate || ev.startDate;
     if (ev.yearly) {
+      // 기간(종료-시작) 일수 보존
+      const spanDays = Math.round((new Date(ed0+'T00:00') - new Date(ev.startDate+'T00:00')) / 86400000) || 0;
       for (let y = y0; y <= y1; y++) {
-        const delta = y - (+ev.startDate.slice(0,4));
-        const sd = shiftDateYear(ev.startDate, delta), ed = shiftDateYear(ed0, delta);
+        let sd, ed;
+        if (ev.lunar) {                                   // 음력 기준: 그 해의 양력으로 변환
+          sd = lunarToSolar(y, ev.lunar.m, ev.lunar.d, ev.lunar.leap);
+          if (!sd) continue;
+          ed = spanDays ? addDaysYmd(sd, spanDays) : sd;
+        } else {
+          const delta = y - (+ev.startDate.slice(0,4));
+          sd = shiftDateYear(ev.startDate, delta); ed = shiftDateYear(ed0, delta);
+        }
         if (sd <= rangeEnd && ed >= rangeStart) out.push({ ev, sd, ed });
       }
     } else if (ev.startDate <= rangeEnd && ed0 >= rangeStart) {
@@ -1012,9 +1026,11 @@ function listInstances(today) {
     const ed0 = ev.endDate || ev.startDate;
     if (ev.yearly) {
       let picked = null;
+      const spanDays = Math.round((new Date(ed0+'T00:00') - new Date(ev.startDate+'T00:00')) / 86400000) || 0;
       for (let y = ty-1; y <= ty+2; y++) {
-        const delta = y - (+ev.startDate.slice(0,4));
-        const sd = shiftDateYear(ev.startDate, delta), ed = shiftDateYear(ed0, delta);
+        let sd, ed;
+        if (ev.lunar) { sd = lunarToSolar(y, ev.lunar.m, ev.lunar.d, ev.lunar.leap); if (!sd) continue; ed = spanDays ? addDaysYmd(sd, spanDays) : sd; }
+        else { const delta = y - (+ev.startDate.slice(0,4)); sd = shiftDateYear(ev.startDate, delta); ed = shiftDateYear(ed0, delta); }
         if (ed >= today) { picked = { ev, sd, ed }; break; }
       }
       out.push(picked || { ev, sd: ev.startDate, ed: ed0 });
@@ -1055,6 +1071,7 @@ function renderEvGroups(box, list, today, markToday) {
 function openEvt(ev) {
   if (ev === null && !canEdit()) { alert('편집 모드(🔓)에서만 추가할 수 있습니다.'); return; }
   editingEvId = ev ? ev.id : null;
+  evLunarSel = (ev && ev.lunar) ? { m:+ev.lunar.m, d:+ev.lunar.d, leap:!!ev.lunar.leap } : null;
   const ro = !canEdit();
   document.getElementById('evModalTitle').textContent = ev ? (ro ? '일정 보기' : '일정 수정') : '일정 추가';
   const def = calSel || todayYmd();
@@ -1102,7 +1119,10 @@ function saveEvt() {
   let ed = document.getElementById('evEndDate').value || sd;
   if (ed < sd) ed = sd;
   const ts = nowIso();
-  const data = { title, startDate:sd, endDate:ed,
+  // 음력 기준: 시작일이 그 음력의 (해당 연도) 양력 변환값과 일치할 때만 유지(수동 변경 시 해제)
+  const lunar = (evLunarSel && lunarToSolar(+sd.slice(0,4), evLunarSel.m, evLunarSel.d, evLunarSel.leap) === sd)
+    ? { m:evLunarSel.m, d:evLunarSel.d, leap:!!evLunarSel.leap } : null;
+  const data = { title, startDate:sd, endDate:ed, lunar,
     startTime:document.getElementById('evStartTime').value||'',
     endTime:document.getElementById('evEndTime').value||'',
     memberId:evMemberSel, color:document.getElementById('evColorIn').value || '',
@@ -1245,6 +1265,7 @@ async function bootstrap() {
     if (!y || !m || !dd) { alert('음력 년·월·일을 입력하세요.'); return; }
     const sol = lunarToSolar(y, m, dd, leap);
     if (!sol) { alert('변환할 수 없는 음력 날짜입니다(1901~2099).'); return; }
+    evLunarSel = { m, d: dd, leap };   // 음력 기준 기억 → 저장 시 ev.lunar 로, 매년반복은 연도별 변환
     const sd = document.getElementById('evStartDate');
     sd.value = sol; sd.dispatchEvent(new Event('input'));   // 종료일 자동맞춤 트리거
     document.getElementById('evLunarBox').classList.add('hidden');
