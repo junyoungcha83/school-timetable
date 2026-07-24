@@ -11,7 +11,7 @@ school-timetable/
 ├── sw.js
 ├── assets/{app.js, app.css, icon.svg, icon-maskable.svg}
 ├── data/default.json        # 첫 실행 fallback (빈 상태)
-└── worker/                  # Cloudflare Worker — 데이터 동기화 API
+└── api/                     # Cloudflare Worker — 데이터 동기화 API
     ├── src/index.js
     ├── package.json
     └── wrangler.toml
@@ -54,7 +54,7 @@ open http://localhost:8000/
 ## Worker 배포
 
 ```sh
-cd worker
+cd api
 npx wrangler kv:namespace create TIMETABLE
 # 출력 id 를 wrangler.toml 에 채워넣기
 npx wrangler secret put EDIT_TOKEN
