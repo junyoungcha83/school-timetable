@@ -464,7 +464,7 @@ function setActiveChild(c) {
 function renderMiniTabs() {
   const bar = document.getElementById('miniTabs');
   const list = activeTab === 'grid'
-    ? [...CHILDREN, { id: 'seungseung', label: '승승' }]
+    ? [{ id: 'seungseung', label: '승승' }, ...CHILDREN]
     : CHILDREN;
   bar.innerHTML = list.map(c =>
     `<button class="mini-tab${c.id === activeChild ? ' active' : ''}" data-child="${c.id}">${escapeAttr(c.label)}</button>`
@@ -671,6 +671,7 @@ function renderGrid() {
   // 한 칸 = 30분. 30분 단위가 아닌 시각은 15분 기준 스냅(분≤15 → 정시쪽, 분>15 → 30분쪽).
   // ※ 스냅은 '격자 배치'에만 적용 — 블록 라벨에는 실제 시작~종료 시간을 그대로 표시(혼동 방지).
   const SLOT = 30;
+  const ROW_H = 40;                 // 한 행 높이(px) — CSS 격자와 동일해야 현재시각 선이 정확
   const snap30 = m => { const r = ((m % SLOT) + SLOT) % SLOT; return r <= 15 ? m - r : m - r + SLOT; };
   let minT = Math.min(...items.map(e => snap30(parseTimeMin(e.start))));
   let maxT = Math.max(...items.map(e => snap30(parseTimeMin(e.end))));
@@ -681,16 +682,21 @@ function renderGrid() {
   const tt = document.createElement('div');
   tt.className = 'timetable' + (isSeungseung ? ' seungseung' : '');
   // grid: 헤더 1행 + slots 행 (한 칸 40px — 줄바꿈 텍스트 수용)
-  tt.style.gridTemplateRows = `auto repeat(${slots}, 40px)`;
+  tt.style.gridTemplateRows = `auto repeat(${slots}, ${ROW_H}px)`;
+  // 현재시각 표시가 격자 전체를 다시 그리지 않고 위치만 갱신할 수 있게 메타를 남김
+  tt.dataset.minT  = String(minT);
+  tt.dataset.slots = String(slots);
 
   // ★ 모든 배경 칸을 '명시 배치'(grid-column/row 지정)로 둔다.
   //   entry 들이 명시 배치라, 배경 칸을 auto-placement 로 두면 grid 가 entry 를 먼저 놓고
   //   배경 칸이 그 주위로 밀려 흐르며 시간 열·격자가 어긋난다. 전부 명시하면 정렬이 고정됨.
   let html = '';
-  // 헤더(1행): 좌상단 빈칸 + 요일
+  // 헤더(1행): 좌상단 빈칸 + 요일 (오늘 요일은 빨간 글씨 — 일요일은 격자에 없으므로 자연히 제외)
+  const todayId = DAYS[new Date().getDay() - 1]?.id;   // getDay(): 0=일 → undefined
   html += `<div class="tt-cell tt-head" style="grid-column:1;grid-row:1"></div>`;
   DAYS.forEach((d, di) => {
-    html += `<div class="tt-cell tt-head" style="grid-column:${di + 2};grid-row:1">${d.short}</div>`;
+    const today = d.id === todayId ? ' today' : '';
+    html += `<div class="tt-cell tt-head${today}" style="grid-column:${di + 2};grid-row:1">${d.short}</div>`;
   });
   // 시간 라벨(1열) + 빈 셀 — 정시는 큰 굵은 글씨('08:00'), 30분은 작은 보조('30')
   for (let i = 0; i < slots; i++) {
@@ -767,7 +773,47 @@ function renderGrid() {
       tt.appendChild(overlay);
     }
   }
+
+  updateNowIndicator(tt);
 }
+
+// ── 현재 시각 표시 ───────────────────────────────
+// 시간 열에 'HH:mm' 알약 + 격자 가로선. 격자를 다시 그리지 않고 위치만 갱신(스크롤 유지).
+function updateNowIndicator(tt) {
+  tt = tt || document.querySelector('#gridWrap .timetable');
+  if (!tt || !tt.dataset.minT) return;
+  tt.querySelectorAll('.tt-now-line, .tt-now-label').forEach(el => el.remove());
+
+  const SLOT = 30, ROW_H = 40;
+  const minT  = Number(tt.dataset.minT);
+  const slots = Number(tt.dataset.slots);
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  // 격자에 없는 시간대(이른 새벽·늦은 밤)면 표시하지 않음
+  if (cur < minT || cur > minT + slots * SLOT) return;
+
+  const off  = cur - minT;
+  const idx  = Math.min(slots - 1, Math.floor(off / SLOT));   // 몇 번째 30분 칸인지
+  const px   = ((off - idx * SLOT) / SLOT) * ROW_H;           // 칸 안에서의 세로 오프셋
+  const row  = String(idx + 2);                               // 헤더가 1행
+
+  const line = document.createElement('div');
+  line.className = 'tt-now-line';
+  line.style.gridRow = row;
+  line.style.gridColumn = '1 / -1';
+  line.style.marginTop = px + 'px';
+  tt.appendChild(line);
+
+  const label = document.createElement('div');
+  label.className = 'tt-now-label';
+  label.style.gridRow = row;
+  label.style.gridColumn = '1';
+  label.style.marginTop = px + 'px';
+  label.innerHTML = `<span>${fmtMin(cur)}</span>`;
+  tt.appendChild(label);
+}
+// 분이 바뀌는 것만 반영하면 되므로 30초 간격이면 충분
+setInterval(() => { if (activeTab === 'grid') updateNowIndicator(); }, 30000);
 
 // ════════ 달력 / 목록 (가족스케줄 통합) ════════
 function canEdit() { return !!getEditToken(); }

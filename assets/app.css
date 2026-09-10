@@ -76,7 +76,7 @@ input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
   border-bottom-color: #f59e0b;
 }
 
-/* ── 미니 탭 (승호/승아/승승) ── */
+/* ── 미니 탭 (승승/승호/승아) ── */
 .mini-tabs {
   position: sticky; top: 109px; z-index: 48;
   display: flex; gap: 6px;
@@ -258,6 +258,8 @@ body.read-only .fab-save { display: none; }
 }
 /* 좌상단 코너 — 가로·세로 스크롤 모두에 고정(헤더행·시간열보다 위) */
 .tt-head:first-child { position: sticky; left: 0; top: 0; z-index: 6; }
+/* 오늘 요일 — 빨간 글씨(현재시각 선과 같은 색). 일요일은 격자에 없어 자연히 제외됨 */
+.tt-head.today { color: #ef4444; }
 .tt-time {
   background: #fce7f3;
   font-size: .68rem;
@@ -278,6 +280,28 @@ body.read-only .fab-save { display: none; }
   border-top: 1px solid rgba(0,0,0,.45);
   pointer-events: none;
   z-index: 3;
+}
+
+/* 현재 시각 — 시간 열의 빨간 알약 + 격자 가로선(JS 가 grid-row·margin-top 으로 배치) */
+.tt-now-line {
+  border-top: 2px solid #ef4444;
+  pointer-events: none;
+  z-index: 3;
+}
+.tt-now-label {
+  position: sticky; left: 0;       /* 시간 열과 함께 가로 스크롤에 고정 */
+  z-index: 7;                      /* 시간 열(5)·헤더(4)보다 위 */
+  pointer-events: none;
+}
+.tt-now-label span {
+  position: absolute; top: 0; left: 2px; right: 2px;
+  transform: translateY(-50%);     /* 알약 중앙을 가로선에 정확히 맞춤 */
+  background: #ef4444; color: #fff;
+  font-size: .56rem; font-weight: 700; line-height: 1.35;
+  text-align: center;
+  border-radius: 999px;
+  padding: 1px 0;
+  font-variant-numeric: tabular-nums;
 }
 /* entry 셀 — JS 가 grid-row 로 시작/종료 배치 */
 .tt-entry {
