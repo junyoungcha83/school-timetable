@@ -142,7 +142,7 @@ function DEFAULT_STATE() { return { version: 1, entries: [], events: [], members
 
 let state = DEFAULT_STATE();
 let activeTab = 'grid';          // 'detail' | 'grid' | 'calendar' | 'list'
-let activeChild = 'seungho';     // 'seungho' | 'seunga' | 'seungseung' (grid 전용)
+let activeChild = 'seungseung';  // 'seungho' | 'seunga' | 'seungseung' (grid 전용) — 첫 진입은 승승(합본)
 
 // 달력/목록(가족스케줄) 상태
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
