@@ -142,7 +142,10 @@ function DEFAULT_STATE() { return { version: 1, entries: [], events: [], members
 
 let state = DEFAULT_STATE();
 let activeTab = 'grid';          // 'detail' | 'grid' | 'calendar' | 'list'
-let activeChild = 'seungseung';  // 'seungho' | 'seunga' | 'seungseung' (grid 전용) — 첫 진입은 승승(합본)
+// 탭별로 선택을 따로 기억 — 저장하지 않으므로 앱을 열 때마다 시간표는 항상 승승(합본)
+let gridChild = 'seungseung';    // 시간표 탭 선택 — 'seungseung' | 'seungho' | 'seunga'
+let detailChild = 'seungho';     // 상세 탭 선택 — 'seungho' | 'seunga'
+let activeChild = gridChild;
 
 // 달력/목록(가족스케줄) 상태
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
@@ -437,10 +440,8 @@ function setActiveTab(t) {
   if (!['detail', 'grid', 'calendar', 'list', 'memo'].includes(t)) return;
   activeTab = t;
   try { localStorage.setItem('school-timetable-tab', t); } catch (e) {}
-  // 현재 activeChild 가 새 탭에서 유효한지 확인
-  if (activeTab === 'detail' && activeChild === 'seungseung') {
-    activeChild = 'seungho';
-  }
+  // 탭별 선택 복원 — 상세엔 합본(승승)이 없으므로 자동으로 갈라진다
+  activeChild = (activeTab === 'detail') ? detailChild : gridChild;
   document.querySelectorAll('.top-tab').forEach(b => {
     const on = b.dataset.tab === t;
     b.classList.toggle('active', on);
@@ -458,6 +459,8 @@ function setActiveTab(t) {
 }
 function setActiveChild(c) {
   activeChild = c;
+  if (activeTab === 'detail') detailChild = c;
+  else                        gridChild = c;
   renderMiniTabs();
   render();
 }
