@@ -284,7 +284,7 @@ body.read-only .fab-save { display: none; }
 
 /* 현재 시각 — 시간 열의 빨간 알약 + 격자 가로선(JS 가 grid-row·margin-top 으로 배치) */
 .tt-now-line {
-  border-top: 2px solid #ef4444;
+  border-top: 2px solid rgba(239, 68, 68, .5);   /* #ef4444 50% — 과목 색을 덜 가리도록 */
   pointer-events: none;
   z-index: 3;
 }
