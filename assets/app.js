@@ -1231,6 +1231,13 @@ function memoTimeText(mo) {
   const d = new Date(mo.updated_at || mo.created_at || Date.now());
   return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
+function autoGrowMemo(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+function growAllMemos() {
+  document.querySelectorAll('#memoView .memo-text').forEach(autoGrowMemo);
+}
 function renderMemos() {
   const box = document.getElementById('memoView'); box.innerHTML='';
   if (canEdit()) {
@@ -1241,8 +1248,9 @@ function renderMemos() {
   if (!memos.length) { box.insertAdjacentHTML('beforeend','<div class="ev-empty">메모가 없어요.<br>＋ 메모 추가로 작성해 보세요.</div>'); return; }
   for (const mo of memos) {
     const card = document.createElement('div'); card.className='memo-card';
-    const ta = document.createElement('textarea'); ta.className='memo-text'; ta.rows=3;
+    const ta = document.createElement('textarea'); ta.className='memo-text'; ta.rows=1;
     ta.value = mo.text; ta.placeholder='메모...'; ta.disabled = !canEdit();
+    ta.oninput = () => autoGrowMemo(ta);
     ta.onchange = () => { mo.text = ta.value; mo.updated_at = nowIso(); saveEvents(); };
     const bar = document.createElement('div'); bar.className='memo-bar';
     const time = document.createElement('span'); time.className='memo-time'; time.textContent = memoTimeText(mo);
@@ -1254,6 +1262,7 @@ function renderMemos() {
       bar.appendChild(del);
     }
     card.appendChild(ta); card.appendChild(bar); box.appendChild(card);
+    autoGrowMemo(ta);
   }
 }
 function addMemo() {
@@ -1270,6 +1279,8 @@ async function bootstrap() {
   document.querySelectorAll('.top-tab').forEach(b => {
     b.onclick = () => setActiveTab(b.dataset.tab);
   });
+  // 화면 폭이 바뀌면 줄바꿈이 달라지므로 메모 높이 재계산
+  window.addEventListener('resize', () => { if (activeTab === 'memo') growAllMemos(); });
   // 편집 토큰
   document.getElementById('btnEdit').onclick = promptEditToken;
   // 저장 FAB

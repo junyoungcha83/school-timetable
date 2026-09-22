@@ -539,8 +539,9 @@ body.read-only .memo-del { display:none !important; }
 /* ── 메모 보드 ── */
 .memo-view { display:flex; flex-direction:column; gap:10px; padding:4px 0 24px; }
 .memo-card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px; }
-.memo-text { width:100%; border:none; resize:vertical; font:inherit; font-size:.95rem;
-  line-height:1.45; color:var(--text); background:transparent; outline:none; }
+.memo-text { width:100%; border:none; resize:none; overflow:hidden; font:inherit; font-size:.95rem;
+  line-height:1.45; color:var(--text); background:transparent; outline:none;
+  display:block; min-height:2.9em; }
 .memo-bar { display:flex; align-items:center; gap:8px; margin-top:6px; }
 .memo-time { flex:1; font-size:.72rem; color:var(--muted); }
 .memo-del { color:var(--danger); background:transparent; border:none; font-size:.82rem; cursor:pointer; }
