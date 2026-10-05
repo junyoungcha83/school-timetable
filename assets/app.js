@@ -26,6 +26,18 @@ const PALETTE = [
   '#fde68a', '#fca5a5', '#93c5fd', '#86efac',
   '#c4b5fd', '#fdba74', '#67e8f9', '#d1d5db',
 ];
+// 색상 = 분류. 원 안 약칭(short)과 통계용 이름(name). 하늘은 미지정이라 원 안 글자 없음.
+const COLOR_LABELS = {
+  '#fde68a': { short: '호학', name: '승호학원' },
+  '#fca5a5': { short: '호교', name: '승호학교' },
+  '#93c5fd': { short: '호예', name: '승호예체능' },
+  '#86efac': { short: '아유', name: '승아유치원' },
+  '#c4b5fd': { short: '아학', name: '승아학원' },
+  '#fdba74': { short: '아예', name: '승아예체능' },
+  '#67e8f9': { short: '',     name: '하늘' },
+  '#d1d5db': { short: '기타', name: '기타' },
+};
+const SLEEP_H = 45;   // 통계: 잠자는 시간 고정(하루 9시간 × 5일)
 
 // ── 음력 변환 (1900–2100 표준 lunarInfo 표) ──────────
 const LUNAR_INFO = [
@@ -467,7 +479,7 @@ function setActiveChild(c) {
 function renderMiniTabs() {
   const bar = document.getElementById('miniTabs');
   const list = activeTab === 'grid'
-    ? [{ id: 'seungseung', label: '승승' }, ...CHILDREN]
+    ? [{ id: 'seungseung', label: '승승' }, ...CHILDREN, { id: 'stats', label: '통계' }]
     : CHILDREN;
   bar.innerHTML = list.map(c =>
     `<button class="mini-tab${c.id === activeChild ? ' active' : ''}" data-child="${c.id}">${escapeAttr(c.label)}</button>`
@@ -549,7 +561,7 @@ function makeRowCard(entry, dayId) {
     </div>
     <div class="palette" aria-label="색상">
       ${PALETTE.map(c =>
-        `<button type="button" class="palette-swatch${c === e.color ? ' selected' : ''}" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`
+        `<button type="button" class="palette-swatch${c === e.color ? ' selected' : ''}" data-color="${c}" style="background:${c}" aria-label="${escapeAttr(COLOR_LABELS[c]?.name || c)}">${COLOR_LABELS[c]?.short || ''}</button>`
       ).join('')}
     </div>
   `;
@@ -647,6 +659,7 @@ function addEntry(dayId) {
 function renderGrid() {
   const wrap = document.getElementById('gridWrap');
   wrap.innerHTML = '';
+  if (activeChild === 'stats') { renderStats(wrap); return; }
 
   const isSeungseung = activeChild === 'seungseung';
   // 보일 entry — start/end 가 유효한 것만
@@ -778,6 +791,66 @@ function renderGrid() {
   }
 
   updateNowIndicator(tt);
+}
+
+// ── 통계 (주 5일 = 120시간 기준) ─────────────────
+// 월~금 스케줄을 색상별로 합산. 같은 아이의 같은 요일에 겹치는 시간은 먼저 시작한 항목에만 넣어 중복 집계를 막는다.
+const WEEK_H = 24 * 5;
+const STAT_DAYS = DAYS.filter(d => d.id !== 'sat');
+function fmtH(h) { return (Math.round(h * 10) / 10).toString(); }
+function childStats(childId) {
+  const byColor = {};
+  for (const day of STAT_DAYS) {
+    const used = new Uint8Array(1440);
+    const list = state.entries
+      .filter(e => e.child === childId && e.day === day.id)
+      .map(e => ({ e, s: parseTimeMin(e.start), x: parseTimeMin(e.end) }))
+      .filter(o => o.s != null && o.x != null && o.x > o.s && o.e.content && o.e.content.trim())
+      .sort((a, b) => a.s - b.s);
+    for (const { e, s, x } of list) {
+      let n = 0;
+      for (let m = s; m < x; m++) if (!used[m]) { used[m] = 1; n++; }
+      byColor[e.color] = (byColor[e.color] || 0) + n;
+    }
+  }
+  const segs = PALETTE.filter(c => byColor[c]).map(c => ({
+    color: c, short: COLOR_LABELS[c]?.short || '', name: COLOR_LABELS[c]?.name || c, h: byColor[c] / 60,
+  }));
+  // 팔레트 밖 색(옛 데이터)도 놓치지 않게
+  Object.keys(byColor).filter(c => !PALETTE.includes(c)).forEach(c =>
+    segs.push({ color: c, short: '', name: '기타색', h: byColor[c] / 60 }));
+  const busy = segs.reduce((t, s) => t + s.h, 0);
+  const free = Math.max(0, WEEK_H - SLEEP_H - busy);
+  return { segs, busy, free, over: busy > WEEK_H - SLEEP_H };
+}
+function renderStats(wrap) {
+  let html = '<div class="stats">';
+  for (const c of CHILDREN) {
+    const st = childStats(c.id);
+    const pct = h => (h / WEEK_H * 100).toFixed(3) + '%';
+    const barSeg = (cls, style, h, inner) =>
+      `<div class="st-seg ${cls}" style="width:${pct(h)};${style}" title="${fmtH(h)}시간">${h / WEEK_H >= 0.07 ? inner : ''}</div>`;
+    const bar =
+      st.segs.map(s => barSeg('', `background:${s.color}`, s.h,
+        `<b>${escapeAttr(s.short || s.name)}</b><span>${fmtH(s.h)}h</span>`)).join('') +
+      (st.free > 0 ? barSeg('st-free', '', st.free, `<b>자유</b><span>${fmtH(st.free)}h</span>`) : '') +
+      barSeg('st-sleep', '', SLEEP_H, `<b>수면</b><span>${SLEEP_H}h</span>`);
+    const row = (sw, name, h) =>
+      `<li><i class="st-dot" style="${sw}"></i><span class="st-name">${escapeAttr(name)}</span>` +
+      `<span class="st-h">${fmtH(h)}시간 <small>(일평균 ${fmtH(h / 5)}시간)</small></span></li>`;
+    html += `
+      <section class="st-card">
+        <div class="st-head"><strong>${escapeAttr(c.label)}</strong><small>월~금 · 전체 ${WEEK_H}시간</small></div>
+        <div class="st-bar">${bar}</div>
+        <ul class="st-list">
+          ${st.segs.map(s => row(`background:${s.color}`, s.name, s.h)).join('')}
+          ${row('background:#fff', '자유시간', st.free)}
+          ${row('background:#475569', '수면(고정)', SLEEP_H)}
+        </ul>
+        ${st.over ? '<p class="st-warn">일정 합계가 수면 제외 75시간을 넘어 자유시간을 0으로 표시했습니다.</p>' : ''}
+      </section>`;
+  }
+  wrap.innerHTML = html + '</div>';
 }
 
 // ── 현재 시각 표시 ───────────────────────────────
