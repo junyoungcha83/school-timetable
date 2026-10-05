@@ -24,9 +24,9 @@ const KINDS = [
 ];
 const PALETTE = [
   '#fde68a', '#fca5a5', '#93c5fd', '#86efac',
-  '#c4b5fd', '#fdba74', '#67e8f9', '#d1d5db',
+  '#c4b5fd', '#fdba74', '#d1d5db',
 ];
-// 색상 = 분류. 원 안 약칭(short)과 통계용 이름(name). 하늘은 미지정이라 원 안 글자 없음.
+// 색상 = 분류. 원 안 약칭(short)과 통계용 이름(name).
 const COLOR_LABELS = {
   '#fde68a': { short: '호학', name: '승호학원' },
   '#fca5a5': { short: '호교', name: '승호학교' },
@@ -34,7 +34,6 @@ const COLOR_LABELS = {
   '#86efac': { short: '아유', name: '승아유치원' },
   '#c4b5fd': { short: '아학', name: '승아학원' },
   '#fdba74': { short: '아예', name: '승아예체능' },
-  '#67e8f9': { short: '',     name: '하늘' },
   '#d1d5db': { short: '기타', name: '기타' },
 };
 const SLEEP_H = 45;   // 통계: 잠자는 시간 고정(하루 9시간 × 5일)
