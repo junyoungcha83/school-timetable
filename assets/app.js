@@ -813,7 +813,9 @@ function childStats(childId) {
       byColor[e.color] = (byColor[e.color] || 0) + n;
     }
   }
-  const segs = PALETTE.filter(c => byColor[c]).map(c => ({
+  // 통계 막대 순서 — 호교(빨강)를 맨 왼쪽, 나머지는 팔레트 순
+  const order = ['#fca5a5', ...PALETTE.filter(c => c !== '#fca5a5')];
+  const segs = order.filter(c => byColor[c]).map(c => ({
     color: c, short: COLOR_LABELS[c]?.short || '', name: COLOR_LABELS[c]?.name || c, h: byColor[c] / 60,
   }));
   // 팔레트 밖 색(옛 데이터)도 놓치지 않게
