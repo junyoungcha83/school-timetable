@@ -173,13 +173,14 @@ input, select, textarea { font-size: 16px; }   /* iOS auto-zoom 방지 */
   display: flex; gap: 5px; flex-wrap: wrap;
 }
 .palette-swatch {
-  width: 30px; height: 30px;
-  border-radius: 50%;
+  /* 전체 이름(승호예체능 등)이 들어가도록 알약형. 글자 없는 색(하늘)은 원형 유지 */
+  min-width: 30px; height: 30px;
+  border-radius: 999px;
   border: 2px solid transparent;
   cursor: pointer;
-  padding: 0;
-  font-size: .62rem; font-weight: 700; color: #1f2937;
-  letter-spacing: -.5px; line-height: 1;
+  padding: 0 8px;
+  font-size: .72rem; font-weight: 700; color: #1f2937;
+  letter-spacing: -.3px; line-height: 1; white-space: nowrap;
   outline: 1px solid var(--border);
   outline-offset: -1px;
 }

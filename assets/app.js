@@ -561,7 +561,7 @@ function makeRowCard(entry, dayId) {
     </div>
     <div class="palette" aria-label="색상">
       ${PALETTE.map(c =>
-        `<button type="button" class="palette-swatch${c === e.color ? ' selected' : ''}" data-color="${c}" style="background:${c}" aria-label="${escapeAttr(COLOR_LABELS[c]?.name || c)}">${COLOR_LABELS[c]?.short || ''}</button>`
+        `<button type="button" class="palette-swatch${c === e.color ? ' selected' : ''}" data-color="${c}" style="background:${c}" aria-label="${escapeAttr(COLOR_LABELS[c]?.name || c)}">${COLOR_LABELS[c]?.short ? escapeAttr(COLOR_LABELS[c].name) : ''}</button>`
       ).join('')}
     </div>
   `;
